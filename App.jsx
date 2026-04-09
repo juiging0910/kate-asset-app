@@ -207,10 +207,10 @@ const S=`
 
   /* ── NAV (4 tabs) ── */
   .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(8,9,14,.97);backdrop-filter:blur(24px);border-top:1px solid rgba(240,242,245,.07);display:flex;padding:10px 0 24px;z-index:100;}
-  .ni{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:rgba(240,242,248,.28);font-size:8px;letter-spacing:.5px;transition:color .2s;font-family:'Cinzel',serif;position:relative;}
+  .ni{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color:rgba(240,242,248,.38);font-size:11px;letter-spacing:.5px;transition:color .2s;font-family:'Cinzel',serif;position:relative;font-weight:500;}
   .ni.active{color:var(--gold);}
   .ni.active::before{content:'';position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:20px;height:2px;background:var(--gold);border-radius:2px;}
-  .ni-ic{font-size:18px;}
+  .ni-ic{font-size:22px;}
   .ni-badge{position:absolute;top:-2px;right:50%;transform:translateX(140%);width:15px;height:15px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;}
 
   /* ── SHARED ── */
@@ -727,7 +727,7 @@ export default function App(){
   // Holdings state
   const USD_TWD=31.5;
   const [holdingsTab,setHoldingsTab]=useState("insurance");
-  const INS_BLANK={product:"安達 — 傳承守創V",policyNo:"",policyType:"分紅",paymentTerm:"2年",faceAmountUSD:"",annualPremiumUSD:"",actualCostUSD:"",startYear:String(new Date().getFullYear()),lifeCoverUSD:""};
+  const INS_BLANK={product:"富邦 — 富域多元貨幣",policyNo:"",policyType:"分紅",paymentTerm:"2年",faceAmountUSD:"",annualPremiumUSD:"",actualCostUSD:"",startYear:String(new Date().getFullYear()),lifeCoverUSD:""};
   const [insuranceHoldings,setInsuranceHoldings]=useState([
     {id:1,product:"安達 — 傳承守創V",policyNo:"HRE02-00123",policyType:"分紅",paymentTerm:"2年",faceAmountUSD:500000,annualPremiumUSD:25000,actualCostUSD:48000,startYear:2024,lifeCoverUSD:""},
     {id:2,product:"富衛 — 盈聚天下II",policyNo:"GFC2-00456",policyType:"壽險",paymentTerm:"5年",faceAmountUSD:300000,annualPremiumUSD:10000,actualCostUSD:49000,startYear:2024,lifeCoverUSD:800000},
@@ -893,12 +893,16 @@ export default function App(){
     const fullCode=isLocal?rawCode.trim()+".TW":rawCode.trim().toUpperCase();
     const isTW=fullCode.endsWith(".TW");
     try{
-      const searchResult=await searchNews(`Stock ${fullCode} company name in Chinese and latest closing price ${isTW?"TWD":"USD"}`);
-      const jsonRaw=await generateAI(`根據以下股票資訊，只輸出純JSON，不要任何說明：{"name":"公司中文名稱","currentPrice":數字}\n資訊：${searchResult.slice(0,800)}`,200);
-      const clean=jsonRaw.replace(/```json|```/g,"").trim();
-      const info=JSON.parse(clean.slice(clean.indexOf("{"),clean.lastIndexOf("}")+1));
-      setStockForm(p=>({...p,code:fullCode,name:info.name||fullCode,currentPrice:String(info.currentPrice||""),currency:isTW?"TWD":"USD"}));
-    }catch{setStockForm(p=>({...p,code:fullCode,name:fullCode,currency:isTW?"TWD":"USD"}));}
+      // 用 Yahoo Finance API 查詢股票名稱和現價
+      const res=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(fullCode)}?interval=1d&range=1d`);
+      const data=await res.json();
+      const meta=data?.chart?.result?.[0]?.meta;
+      const name=meta?.shortName||meta?.longName||fullCode;
+      const price=meta?.regularMarketPrice||meta?.previousClose||"";
+      setStockForm(p=>({...p,code:fullCode,name,currentPrice:String(price),currency:isTW?"TWD":"USD"}));
+    }catch{
+      setStockForm(p=>({...p,code:fullCode,name:fullCode,currency:isTW?"TWD":"USD"}));
+    }
     setStockLookupLoading(false);
   };
   const saveStock=()=>{
@@ -1009,7 +1013,23 @@ export default function App(){
 
   const unread=notifs.filter(n=>n.unread).length;
   const rankStyle={"首選":"r1","次選":"r2","補充":"r3"};
-  const INSURANCE_PRODUCTS=["安達 — 傳承守創V","富衛 — 盈聚天下II","忠意 — 啟航創富卓越版","AIA — 百樂財富永傳","永明 — 星河尊享2","FWD — FIF 指數萬用壽險"];
+  const INSURANCE_PRODUCTS=[
+    // 🇭🇰 香港保險
+    "富邦 — 富域多元貨幣",
+    "義大利忠意 — 啟航創富卓越版",
+    "安達 — 傳承守創V",
+    "蘇黎世 — 瑞駿IUL",
+    "安盛AXA — 盛利",
+    "永明 — 星河尊享2",
+    "永明 — 永延壽險",
+    "富衛FWD — 盈聚天下 分紅儲蓄",
+    // 🇸🇬 新加坡保險
+    "AIA友邦 — PIL指數型萬能壽險",
+    "AIA友邦 — PIW百樂財富永傳",
+    "大東方 — 定期壽險",
+    // 🇧🇲 百慕達保險
+    "富衛FWD — 指數萬用壽險",
+  ];
 
   // ─── LOGIN ───
   if(!loggedIn) return(<>
@@ -1856,7 +1876,7 @@ export default function App(){
             <div className="hf-lbl" style={{marginTop:0}}>股票代碼</div>
             <div style={{display:"flex",gap:8}}>
               <input className="hf-inp" style={{flex:1}} placeholder="例如：2330 或 TSLA" value={stockCodeInput} onChange={e=>setStockCodeInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&lookupStock(stockCodeInput)}/>
-              <button onClick={()=>lookupStock(stockCodeInput)} disabled={stockLookupLoading} style={{background:"var(--gold-dim)",border:"1px solid rgba(200,168,75,.3)",borderRadius:11,padding:"0 16px",fontFamily:"'Cinzel',serif",fontSize:10,color:"var(--gold)",cursor:"pointer",whiteSpace:"nowrap"}}>{stockLookupLoading?"查詢中…":"查詢"}</button>
+              <button onClick={()=>lookupStock(stockCodeInput)}  style={{background:"var(--gold-dim)",border:"1px solid rgba(200,168,75,.3)",borderRadius:11,padding:"0 16px",fontFamily:"'Cinzel',serif",fontSize:10,color:"var(--gold)",cursor:"pointer",whiteSpace:"nowrap"}}>{stockLookupLoading?"查詢中…":"查詢"}</button>
             </div>
             {stockForm.name&&<div style={{marginTop:10,padding:"10px 14px",background:"var(--card2)",borderRadius:10,fontSize:13,color:"var(--td)"}}>{stockForm.name} <span style={{color:"var(--md)",fontSize:11}}>{stockForm.code}</span></div>}
             <div className="hf-lbl">股數</div>
