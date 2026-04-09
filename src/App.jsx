@@ -758,17 +758,17 @@ export default function App(){
   const [editFixedId,setEditFixedId]=useState(null);
   const [fixedForm,setFixedForm]=useState({product:"萬兆豐 — 金益求金",amountUSD:"",startDate:"",lockYears:"1",annualRate:"6"});
   // 貴金屬
+  const METAL_BLANK={product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""};
+  const RE_BLANK={product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""};
   const [metalHoldings,setMetalHoldings]=useState([]);
   const [showMetalForm,setShowMetalForm]=useState(false);
   const [editMetalId,setEditMetalId]=useState(null);
-  const METAL_BLANK={product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""};
-  const [metalForm,setMetalForm]=useState(METAL_BLANK);
+  const [metalForm,setMetalForm]=useState({product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""});
   // 房地產
   const [realEstateHoldings,setRealEstateHoldings]=useState([]);
   const [showRealEstateForm,setShowRealEstateForm]=useState(false);
   const [editRealEstateId,setEditRealEstateId]=useState(null);
-  const RE_BLANK={product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""};
-  const [realEstateForm,setRealEstateForm]=useState(RE_BLANK);
+  const [realEstateForm,setRealEstateForm]=useState({product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""});
   // Health
   const [showHealthForm,setShowHealthForm]=useState(false);
   const [healthForm,setHealthForm]=useState({monthlyIncome:"",monthlyExpense:"",emergencyFund:"",totalDebt:"",hasLife:false,hasHealth:false,hasCritical:false,retirementTarget:"",retirementCurrent:""});
@@ -1549,7 +1549,7 @@ export default function App(){
                         </div>
                       );
                     })}
-                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditMetalId(null);setMetalForm(METAL_BLANK);setShowMetalForm(true);}}>+ 新增貴金屬</button>
+                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditMetalId(null);setMetalForm({product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""});setShowMetalForm(true);}}>+ 新增貴金屬</button>
                   </div>
                 )}
                 {/* 房地產 */}
@@ -1574,7 +1574,7 @@ export default function App(){
                         </div>
                       </div>
                     ))}
-                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditRealEstateId(null);setRealEstateForm(RE_BLANK);setShowRealEstateForm(true);}}>+ 新增房地產</button>
+                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditRealEstateId(null);setRealEstateForm({product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""});setShowRealEstateForm(true);}}>+ 新增房地產</button>
                   </div>
                 )}
                                 <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditFixedId(null);setShowFixedForm(true);}}>+ 新增固收</button>
