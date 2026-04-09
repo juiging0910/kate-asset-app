@@ -156,9 +156,14 @@ const TERMS=[
 ];
 
 async function askAI(question){
-  const raw=await generateAI(`你是凱特資產管理的財商教育顧問，用淺顯易懂的方式回答客戶財務問題。用繁體中文，純JSON格式回答（不要markdown）：{"answer":"主要解答（150字內，生活化比喻，分段清楚）","keyPoint":"一句話重點（30字內）","related":["相關問題1","相關問題2","相關問題3"]}。客戶問題：${question}`,800);
-  try{return JSON.parse(raw.replace(/```json|```/g,"").trim());}
-  catch{return{answer:raw,keyPoint:"",related:[]};}
+  const raw=await generateAI(`你是凱特資產管理的財商教育顧問。用繁體中文回答問題，格式：先用一句話說重點，然後用150字內詳細解釋，最後提出3個相關問題。
+回答格式（純JSON，不加任何說明）：{"answer":"詳細解答","keyPoint":"一句話重點","related":["問題1","問題2","問題3"]}
+問題：${question}`,1000);
+  try{
+    const cleaned=raw.replace(/```json|```/g,"").trim();
+    const start=cleaned.indexOf("{");const end=cleaned.lastIndexOf("}")+1;
+    return JSON.parse(cleaned.slice(start,end));
+  }catch{return{answer:raw.replace(/```json|```|\{|\}/g,"").trim()||"抱歉，請再試一次。",keyPoint:"",related:[]};}
 }
 function generateChartPath(up){
   const w=280,h=120;let y=up?80:40;
@@ -718,6 +723,8 @@ export default function App(){
   const [assetsSub,setAssetsSub]=useState("holdings");  // holdings | health | calc
   const [exploreSub,setExploreSub]=useState("news");    // news | stocks
   const [advisorSub,setAdvisorSub]=useState("picks");   // picks | tools | qa
+  const [liveNews,setLiveNews]=useState([]);
+  const [newsLoading,setNewsLoading]=useState(false);
   const [screen,setScreen]=useState(null);  // {type: news|stock|article, data}
   // UI
   const [chartTab,setChartTab]=useState("1M");
@@ -749,7 +756,19 @@ export default function App(){
   ]);
   const [showFixedForm,setShowFixedForm]=useState(false);
   const [editFixedId,setEditFixedId]=useState(null);
-  const [fixedForm,setFixedForm]=useState({product:"萬兆豐 — 金益求兆",amountUSD:"",startDate:"",lockYears:"2",annualRate:"6"});
+  const [fixedForm,setFixedForm]=useState({product:"萬兆豐 — 金益求金",amountUSD:"",startDate:"",lockYears:"1",annualRate:"6"});
+  // 貴金屬
+  const [metalHoldings,setMetalHoldings]=useState([]);
+  const [showMetalForm,setShowMetalForm]=useState(false);
+  const [editMetalId,setEditMetalId]=useState(null);
+  const METAL_BLANK={product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""};
+  const [metalForm,setMetalForm]=useState(METAL_BLANK);
+  // 房地產
+  const [realEstateHoldings,setRealEstateHoldings]=useState([]);
+  const [showRealEstateForm,setShowRealEstateForm]=useState(false);
+  const [editRealEstateId,setEditRealEstateId]=useState(null);
+  const RE_BLANK={product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""};
+  const [realEstateForm,setRealEstateForm]=useState(RE_BLANK);
   // Health
   const [showHealthForm,setShowHealthForm]=useState(false);
   const [healthForm,setHealthForm]=useState({monthlyIncome:"",monthlyExpense:"",emergencyFund:"",totalDebt:"",hasLife:false,hasHealth:false,hasCritical:false,retirementTarget:"",retirementCurrent:""});
@@ -802,6 +821,21 @@ export default function App(){
   const qaRef=useRef(null);
 
   useEffect(()=>{if(threadRef.current)threadRef.current.scrollTop=threadRef.current.scrollHeight;},[msgThread,msgLoading]);
+  useEffect(()=>{
+    if(!loggedIn)return;
+    setNewsLoading(true);
+    searchNews("今日最新財經新聞台灣股市美股黃金保險傳承 5則重要新聞標題和摘要")
+      .then(raw=>generateAI(`根據以下新聞整理5則，純JSON（不加markdown）：{"news":[{"tag":"分類","emoji":"📊","title":"標題20字內","src":"來源","time":"幾小時前","body":"詳細說明100字內\n\n凱特觀點：簡短觀點"}]}\n新聞：${raw.slice(0,2000)}`,1500))
+      .then(raw=>{
+        try{
+          const cleaned=raw.replace(/\`\`\`json|\`\`\`/g,"").trim();
+          const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+          if(data.news?.length>0)setLiveNews(data.news);
+        }catch{}
+        setNewsLoading(false);
+      })
+      .catch(()=>setNewsLoading(false));
+  },[loggedIn]);
   useEffect(()=>{if(qaRef.current)qaRef.current.scrollTop=qaRef.current.scrollHeight;},[qaThread,qaLoading]);
 
   const handleRegister=async()=>{
@@ -845,6 +879,10 @@ export default function App(){
       if(fixData&&fixData.length>0)setFixedHoldings(fixData);
       else setFixedHoldings([]);
       if(hlthData)setHealthScore(hlthData);
+      const metalData=await loadUserData(user.id,"metals");
+      const reData=await loadUserData(user.id,"realestate");
+      if(metalData&&metalData.length>0)setMetalHoldings(metalData);
+      if(reData&&reData.length>0)setRealEstateHoldings(reData);
       setLoggedIn(true);
     }catch(err){
       setLoginError(err.message||"登入失敗，請重試");
@@ -872,7 +910,9 @@ export default function App(){
   const totalStockCostTWD=stockHoldings.reduce((s,h)=>s+calcStockCostTWD(h),0);
   const totalFixedUSD=fixedHoldings.reduce((s,h)=>s+calcFixedValue(h),0);
   const totalFixedCostUSD=fixedHoldings.reduce((s,h)=>s+h.amountUSD,0);
-  const grandTotalTWD=Math.round(totalInsUSD*USD_TWD)+totalStockTWD+Math.round(totalFixedUSD*USD_TWD);
+  const totalMetalUSD=metalHoldings.reduce((s,h)=>s+(h.grams*(h.currentPricePerGram||h.costPerGram||0)),0);
+  const totalRealEstateUSD=realEstateHoldings.reduce((s,h)=>s+h.amountUSD,0);
+  const grandTotalTWD=Math.round(totalInsUSD*USD_TWD)+totalStockTWD+Math.round(totalFixedUSD*USD_TWD)+Math.round(totalMetalUSD*USD_TWD)+Math.round(totalRealEstateUSD*USD_TWD);
   const fmtUSD=(n)=>"USD "+Number(n).toLocaleString();
   const fmtTWD=(n)=>"NT$ "+Number(n).toLocaleString();
 
@@ -893,13 +933,10 @@ export default function App(){
     const fullCode=isLocal?rawCode.trim()+".TW":rawCode.trim().toUpperCase();
     const isTW=fullCode.endsWith(".TW");
     try{
-      // 用 Yahoo Finance API 查詢股票名稱和現價
-      const res=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(fullCode)}?interval=1d&range=1d`);
-      const data=await res.json();
-      const meta=data?.chart?.result?.[0]?.meta;
-      const name=meta?.shortName||meta?.longName||fullCode;
-      const price=meta?.regularMarketPrice||meta?.previousClose||"";
-      setStockForm(p=>({...p,code:fullCode,name,currentPrice:String(price),currency:isTW?"TWD":"USD"}));
+      const raw=await generateAI(`股票代碼「${fullCode}」的公司中文名稱和最近收盤價是多少？只輸出純JSON：{"name":"公司中文名稱","price":數字}，不要其他文字。`,200);
+      const cleaned=raw.replace(/```json|```/g,"").trim();
+      const info=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+      setStockForm(p=>({...p,code:fullCode,name:info.name||fullCode,currentPrice:String(info.price||""),currency:isTW?"TWD":"USD"}));
     }catch{
       setStockForm(p=>({...p,code:fullCode,name:fullCode,currency:isTW?"TWD":"USD"}));
     }
@@ -925,6 +962,29 @@ export default function App(){
   };
   const deleteFixed=(id)=>{const next=fixedHoldings.filter(h=>h.id!==id);setFixedHoldings(next);showToast("✓ 已刪除");if(currentUser)saveUserData(currentUser.id,"fixed",next).catch(console.error);};
   const editFixed=(h)=>{setEditFixedId(h.id);setFixedForm({product:h.product,amountUSD:String(h.amountUSD),startDate:h.startDate,lockYears:String(h.lockYears),annualRate:String(h.annualRate)});setShowFixedForm(true);};
+
+  // 貴金屬 CRUD
+  const saveMetal=()=>{
+    if(!metalForm.grams||!metalForm.purchaseDate)return;
+    const item={...metalForm,grams:Number(metalForm.grams),costPerGram:Number(metalForm.costPerGram)||0,currentPricePerGram:Number(metalForm.currentPricePerGram)||0};
+    if(editMetalId){setMetalHoldings(p=>p.map(h=>h.id===editMetalId?{...h,...item}:h));}
+    else{setMetalHoldings(p=>[...p,{id:Date.now(),...item}]);}
+    setShowMetalForm(false);setEditMetalId(null);setMetalForm(METAL_BLANK);showToast("✓ 貴金屬已儲存");
+    if(currentUser){const next=editMetalId?metalHoldings.map(h=>h.id===editMetalId?{...h,...item}:h):[...metalHoldings,{id:Date.now(),...item}];saveUserData(currentUser.id,"metals",next).catch(console.error);}
+  };
+  const deleteMetal=(id)=>{const next=metalHoldings.filter(h=>h.id!==id);setMetalHoldings(next);showToast("✓ 已刪除");if(currentUser)saveUserData(currentUser.id,"metals",next).catch(console.error);};
+  const editMetal=(h)=>{setEditMetalId(h.id);setMetalForm({product:h.product,grams:String(h.grams),costPerGram:String(h.costPerGram),currentPricePerGram:String(h.currentPricePerGram),purchaseDate:h.purchaseDate});setShowMetalForm(true);};
+  // 房地產 CRUD
+  const saveRealEstate=()=>{
+    if(!realEstateForm.amountUSD||!realEstateForm.purchaseDate)return;
+    const item={...realEstateForm,amountUSD:Number(realEstateForm.amountUSD),annualReturn:Number(realEstateForm.annualReturn)||0};
+    if(editRealEstateId){setRealEstateHoldings(p=>p.map(h=>h.id===editRealEstateId?{...h,...item}:h));}
+    else{setRealEstateHoldings(p=>[...p,{id:Date.now(),...item}]);}
+    setShowRealEstateForm(false);setEditRealEstateId(null);setRealEstateForm(RE_BLANK);showToast("✓ 房地產已儲存");
+    if(currentUser){const next=editRealEstateId?realEstateHoldings.map(h=>h.id===editRealEstateId?{...h,...item}:h):[...realEstateHoldings,{id:Date.now(),...item}];saveUserData(currentUser.id,"realestate",next).catch(console.error);}
+  };
+  const deleteRealEstate=(id)=>{const next=realEstateHoldings.filter(h=>h.id!==id);setRealEstateHoldings(next);showToast("✓ 已刪除");if(currentUser)saveUserData(currentUser.id,"realestate",next).catch(console.error);};
+  const editRealEstate=(h)=>{setEditRealEstateId(h.id);setRealEstateForm({product:h.product,amountUSD:String(h.amountUSD),purchaseDate:h.purchaseDate,annualReturn:String(h.annualReturn),notes:h.notes||""});setShowRealEstateForm(true);};
 
   // ── Health calc ──
   const calcHealthScore=()=>{
@@ -1085,6 +1145,50 @@ export default function App(){
         </div>
         <div className="nd-body">{n.body.split("\n\n").map((p,i)=><p key={i}>{p}</p>)}</div>
       </div></div>
+      {/* 貴金屬表單 */}
+      {showMetalForm&&(
+        <div className="holding-form-overlay" onClick={e=>e.target===e.currentTarget&&setShowMetalForm(false)}>
+          <div className="holding-form-sheet">
+            <div className="hf-title">{editMetalId?"編輯貴金屬":"新增貴金屬"}</div>
+            <div className="hf-lbl" style={{marginTop:0}}>產品</div>
+            <select className="hf-inp" value={metalForm.product} onChange={e=>setMetalForm(p=>({...p,product:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
+              {["萬兆豐貴金屬 — 實體黃金","萬兆豐 — 金盈滿堂（黃金存摺）"].map(pr=><option key={pr} value={pr}>{pr}</option>)}
+            </select>
+            <div className="hf-lbl">重量（公克）</div>
+            <input className="hf-inp" type="number" placeholder="例如：1000" value={metalForm.grams} onChange={e=>setMetalForm(p=>({...p,grams:e.target.value}))}/>
+            <div className="hf-row">
+              <div style={{flex:1}}><div className="hf-lbl">購入單價（USD/g）</div><input className="hf-inp" type="number" placeholder="例如：95" value={metalForm.costPerGram} onChange={e=>setMetalForm(p=>({...p,costPerGram:e.target.value}))}/></div>
+              <div style={{flex:1,marginLeft:8}}><div className="hf-lbl">現價（USD/g）</div><input className="hf-inp" type="number" placeholder="例如：105" value={metalForm.currentPricePerGram} onChange={e=>setMetalForm(p=>({...p,currentPricePerGram:e.target.value}))}/></div>
+            </div>
+            <div className="hf-lbl">購入日期</div>
+            <input className="hf-inp" type="month" value={metalForm.purchaseDate} onChange={e=>setMetalForm(p=>({...p,purchaseDate:e.target.value}))}/>
+            <button className="hf-save-btn" onClick={saveMetal}>儲存</button>
+            <button className="hf-cancel-btn" onClick={()=>setShowMetalForm(false)}>取消</button>
+          </div>
+        </div>
+      )}
+      {/* 房地產表單 */}
+      {showRealEstateForm&&(
+        <div className="holding-form-overlay" onClick={e=>e.target===e.currentTarget&&setShowRealEstateForm(false)}>
+          <div className="holding-form-sheet">
+            <div className="hf-title">{editRealEstateId?"編輯房地產":"新增房地產"}</div>
+            <div className="hf-lbl" style={{marginTop:0}}>產品</div>
+            <select className="hf-inp" value={realEstateForm.product} onChange={e=>setRealEstateForm(p=>({...p,product:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
+              {["萬兆豐 — 瓦努阿圖預售屋"].map(pr=><option key={pr} value={pr}>{pr}</option>)}
+            </select>
+            <div className="hf-lbl">投入金額（USD）</div>
+            <input className="hf-inp" type="number" placeholder="例如：400000" value={realEstateForm.amountUSD} onChange={e=>setRealEstateForm(p=>({...p,amountUSD:e.target.value}))}/>
+            <div className="hf-row">
+              <div style={{flex:1}}><div className="hf-lbl">購入日期</div><input className="hf-inp" type="month" value={realEstateForm.purchaseDate} onChange={e=>setRealEstateForm(p=>({...p,purchaseDate:e.target.value}))}/></div>
+              <div style={{flex:1,marginLeft:8}}><div className="hf-lbl">預計年化報酬（%）</div><input className="hf-inp" type="number" placeholder="例如：8" value={realEstateForm.annualReturn} onChange={e=>setRealEstateForm(p=>({...p,annualReturn:e.target.value}))}/></div>
+            </div>
+            <div className="hf-lbl">備註（選填）</div>
+            <input className="hf-inp" placeholder="例如：已取得黃金護照" value={realEstateForm.notes} onChange={e=>setRealEstateForm(p=>({...p,notes:e.target.value}))}/>
+            <button className="hf-save-btn" onClick={saveRealEstate}>儲存</button>
+            <button className="hf-cancel-btn" onClick={()=>setShowRealEstateForm(false)}>取消</button>
+          </div>
+        </div>
+      )}
       {showEditName&&(
         <div style={{position:"fixed",inset:0,background:"rgba(8,9,14,.88)",backdropFilter:"blur(8px)",zIndex:400,display:"flex",alignItems:"flex-end"}} onClick={e=>e.target===e.currentTarget&&setShowEditName(false)}>
           <div style={{background:"var(--card)",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:430,margin:"0 auto",padding:"24px 20px 40px"}}>
@@ -1264,11 +1368,16 @@ export default function App(){
               {indices.map((m,i)=><div className="ii" key={i}><div className="ii-n">{m.name}</div><div className="ii-v">{m.val}</div><div className={`ii-c ${m.up?"up":"dn"}`}>{m.chg}</div></div>)}
             </div>
 
-            {/* 新聞精選 2則 */}
+            {/* 即時新聞 */}
             <div className="sec">今日要聞</div>
-            {ALL_NEWS.slice(0,2).map((n,i)=>(
+            {newsLoading?(
+              <div style={{margin:"0 16px 12px",padding:"16px",background:"var(--card)",borderRadius:14,display:"flex",alignItems:"center",gap:12}}>
+                <div className="spin" style={{width:20,height:20,borderWidth:"1.5px"}}/>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)"}}>載入最新新聞…</div>
+              </div>
+            ):(liveNews.length>0?liveNews:ALL_NEWS).slice(0,2).map((n,i)=>(
               <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})}>
-                <div className="nc-emoji">{n.emoji}</div>
+                <div className="nc-emoji">{n.emoji||"📰"}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div className="nc-tag">{n.tag}</div>
                   <div className="nc-title">{n.title}</div>
@@ -1302,14 +1411,16 @@ export default function App(){
                   <div className="hld-total-val">{fmtTWD(grandTotalTWD)}</div>
                   <div style={{fontSize:10,color:"rgba(240,242,248,.3)",marginTop:3,fontFamily:"'Cinzel',serif",letterSpacing:1}}>匯率 1 USD = {USD_TWD} TWD</div>
                   <div className="hld-row">
-                    <div className="hld-st"><div className="hld-sl">保險</div><div className="hld-sv" style={{color:"var(--gold)"}}>{fmtUSD(totalInsUSD)}</div></div>
-                    <div className="hld-st"><div className="hld-sl">股票</div><div className="hld-sv" style={{color:"var(--blue)"}}>{fmtTWD(totalStockTWD)}</div></div>
-                    <div className="hld-st"><div className="hld-sl">固收</div><div className="hld-sv" style={{color:"var(--green)"}}>{fmtUSD(totalFixedUSD)}</div></div>
+                    <div className="hld-st"><div className="hld-sl">保險</div><div className="hld-sv" style={{color:"var(--gold)",fontSize:10}}>{fmtUSD(totalInsUSD)}</div></div>
+                    <div className="hld-st"><div className="hld-sl">股票</div><div className="hld-sv" style={{color:"var(--blue)",fontSize:10}}>{fmtTWD(totalStockTWD)}</div></div>
+                    <div className="hld-st"><div className="hld-sl">固收</div><div className="hld-sv" style={{color:"var(--green)",fontSize:10}}>{fmtUSD(totalFixedUSD)}</div></div>
+                    <div className="hld-st"><div className="hld-sl">貴金屬</div><div className="hld-sv" style={{color:"#b8902a",fontSize:10}}>{fmtUSD(totalMetalUSD)}</div></div>
+                    <div className="hld-st"><div className="hld-sl">房地產</div><div className="hld-sv" style={{color:"var(--rose)",fontSize:10}}>{fmtUSD(totalRealEstateUSD)}</div></div>
                   </div>
                 </div>
-                <div className="htab-row">
-                  {[{id:"insurance",label:"🛡️ 保險"},{id:"stock",label:"📈 股票"},{id:"fixed",label:"💰 固收"}].map(t=>(
-                    <div key={t.id} className={`htab ${holdingsTab===t.id?"active":""}`} onClick={()=>setHoldingsTab(t.id)}>{t.label}</div>
+                <div className="htab-row" style={{overflowX:"auto"}}>
+                  {[{id:"insurance",label:"🛡️ 保險"},{id:"stock",label:"📈 股票"},{id:"fixed",label:"💰 固收"},{id:"metal",label:"💎 貴金屬"},{id:"realestate",label:"🏠 房地產"}].map(t=>(
+                    <div key={t.id} className={`htab ${holdingsTab===t.id?"active":""}`} onClick={()=>setHoldingsTab(t.id)} style={{flexShrink:0}}>{t.label}</div>
                   ))}
                 </div>
                 {/* 保險 */}
@@ -1410,7 +1521,63 @@ export default function App(){
                         </div>
                       );
                     })}
-                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditFixedId(null);setShowFixedForm(true);}}>+ 新增固收</button>
+                    {/* 貴金屬 */}
+                {holdingsTab==="metal"&&(
+                  <div className="hld-list">
+                    {metalHoldings.map(h=>{
+                      const curVal=h.grams*(h.currentPricePerGram||h.costPerGram||0);
+                      const cost=h.grams*h.costPerGram;
+                      const pnl=curVal-cost;const pct=cost>0?((pnl/cost)*100).toFixed(1):"0.0";
+                      return(
+                        <div className="hld-item" key={h.id}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                            <div>
+                              <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:"#b8902a",textTransform:"uppercase",marginBottom:4}}>💎 貴金屬</div>
+                              <div className="hld-item-name">{h.product}</div>
+                              <div className="hld-item-type">{h.grams}g · 購入 {h.purchaseDate}</div>
+                            </div>
+                            <div style={{textAlign:"right"}}>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:pnl>=0?"var(--green)":"var(--red)"}}>USD {curVal.toLocaleString()}</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:pnl>=0?"var(--green)":"var(--red)",marginTop:2}}>{pnl>=0?"+":""}{pct}%</div>
+                            </div>
+                          </div>
+                          <div style={{fontSize:11,color:"var(--md)",marginBottom:8}}>成本 USD {h.costPerGram}/g · 現價 USD {h.currentPricePerGram||h.costPerGram}/g</div>
+                          <div className="hld-actions">
+                            <button className="hld-edit-btn" onClick={()=>editMetal(h)}>✎ 編輯</button>
+                            <button className="hld-del-btn" onClick={()=>deleteMetal(h.id)}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditMetalId(null);setMetalForm(METAL_BLANK);setShowMetalForm(true);}}>+ 新增貴金屬</button>
+                  </div>
+                )}
+                {/* 房地產 */}
+                {holdingsTab==="realestate"&&(
+                  <div className="hld-list">
+                    {realEstateHoldings.map(h=>(
+                      <div className="hld-item" key={h.id}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                          <div>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:"var(--rose)",textTransform:"uppercase",marginBottom:4}}>🏠 房地產</div>
+                            <div className="hld-item-name">{h.product}</div>
+                            <div className="hld-item-type">{h.purchaseDate} · {h.annualReturn}% p.a.</div>
+                          </div>
+                          <div style={{textAlign:"right"}}>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:"var(--rose)"}}>USD {Number(h.amountUSD).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        {h.notes&&<div style={{fontSize:11,color:"var(--md)",marginBottom:8}}>{h.notes}</div>}
+                        <div className="hld-actions">
+                          <button className="hld-edit-btn" onClick={()=>editRealEstate(h)}>✎ 編輯</button>
+                          <button className="hld-del-btn" onClick={()=>deleteRealEstate(h.id)}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditRealEstateId(null);setRealEstateForm(RE_BLANK);setShowRealEstateForm(true);}}>+ 新增房地產</button>
+                  </div>
+                )}
+                                <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditFixedId(null);setShowFixedForm(true);}}>+ 新增固收</button>
                   </div>
                 )}
               </>
@@ -1524,24 +1691,31 @@ export default function App(){
             </div>
             {exploreSub==="news"&&(
               <div style={{paddingTop:12}}>
-                <div className="news-feat" onClick={()=>setScreen({type:"news",data:ALL_NEWS[0]})}>
-                  <div className="news-feat-img" style={{background:"linear-gradient(135deg,#0a1828,#1a2a0a)"}}>{ALL_NEWS[0].emoji}</div>
-                  <div className="news-feat-ov">
-                    <div className="nf-tag">{ALL_NEWS[0].tag}</div>
-                    <div className="nf-tt">{ALL_NEWS[0].title}</div>
-                    <div className="nf-mt"><span>{ALL_NEWS[0].src}</span><span>{ALL_NEWS[0].time}</span></div>
+                {newsLoading?(
+                  <div style={{margin:"0 16px 14px",padding:"20px",background:"var(--card)",borderRadius:16,display:"flex",alignItems:"center",gap:12}}>
+                    <div className="spin" style={{width:24,height:24,borderWidth:"2px"}}/>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"var(--md)"}}>載入即時新聞…</div>
                   </div>
-                </div>
-                {ALL_NEWS.slice(1).map((n,i)=>(
-                  <div className="news-list-item" key={i} onClick={()=>setScreen({type:"news",data:n})}>
-                    <div className="nli-emoji">{n.emoji}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div className="nli-tag">{n.tag}</div>
-                      <div className="nli-title">{n.title}</div>
-                      <div className="nli-meta">{n.src} · {n.time}</div>
+                ):(()=>{const newsToShow=liveNews.length>0?liveNews:ALL_NEWS;return(<>
+                  <div className="news-feat" onClick={()=>setScreen({type:"news",data:newsToShow[0]})}>
+                    <div className="news-feat-img" style={{background:"linear-gradient(135deg,#0a1828,#1a2a0a)"}}>{newsToShow[0]?.emoji||"📰"}</div>
+                    <div className="news-feat-ov">
+                      <div className="nf-tag">{newsToShow[0]?.tag}</div>
+                      <div className="nf-tt">{newsToShow[0]?.title}</div>
+                      <div className="nf-mt"><span>{newsToShow[0]?.src}</span><span>{newsToShow[0]?.time}</span></div>
                     </div>
                   </div>
-                ))}
+                  {newsToShow.slice(1).map((n,i)=>(
+                    <div className="news-list-item" key={i} onClick={()=>setScreen({type:"news",data:n})}>
+                      <div className="nli-emoji">{n.emoji||"📰"}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div className="nli-tag">{n.tag}</div>
+                        <div className="nli-title">{n.title}</div>
+                        <div className="nli-meta">{n.src} · {n.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                </>);})()}
                 <div style={{height:8}}/>
               </div>
             )}
@@ -1901,7 +2075,7 @@ export default function App(){
             <div className="hf-title">{editFixedId?"編輯固收":"新增私募固收"}</div>
             <div className="hf-lbl" style={{marginTop:0}}>產品</div>
             <select className="hf-inp" value={fixedForm.product} onChange={e=>setFixedForm(p=>({...p,product:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
-              {["萬兆豐 — 金益求兆","萬兆豐貴金屬 — 實體黃金"].map(pr=><option key={pr} value={pr}>{pr}</option>)}
+              {["萬兆豐 — 金益求金","萬兆豐 — 金益求兆"].map(pr=><option key={pr} value={pr}>{pr}</option>)}
             </select>
             <div className="hf-lbl">投入本金（USD）</div>
             <input className="hf-inp" type="number" placeholder="例如：100000" value={fixedForm.amountUSD} onChange={e=>setFixedForm(p=>({...p,amountUSD:e.target.value}))}/>
