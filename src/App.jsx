@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react"; 
 
 // ── 產品知識庫 ──
 const DISCLAIMER = "本頁所載產品資訊僅供參考，由凱特資產管理顧問提供，不構成任何投資建議或要約。所有產品均涉及風險，過往表現不代表未來回報。投保前請詳閱相關保單條款，並諮詢您的專屬顧問。";
