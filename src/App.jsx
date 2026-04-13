@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"; 
+import { useState, useRef, useEffect } from "react";
 
 // ── 產品知識庫 ──
 const DISCLAIMER = "本頁所載產品資訊僅供參考，由凱特資產管理顧問提供，不構成任何投資建議或要約。所有產品均涉及風險，過往表現不代表未來回報。投保前請詳閱相關保單條款，並諮詢您的專屬顧問。";
@@ -108,10 +108,10 @@ const stocks=[
   {icon:"🏗️",name:"中鋼",code:"2002.TW",price:"26.90",chg:"-0.74%",up:false,open:"27.10",high:"27.20",low:"26.80",vol:"15.8M",mktcap:"218B"},
 ];
 const indices=[
-  {name:"台灣加權",val:"21,430",chg:"+1.20%",up:true},
-  {name:"S&P 500",val:"5,218",chg:"+0.40%",up:true},
-  {name:"那斯達克",val:"16,340",chg:"-0.22%",up:false},
-  {name:"日經 225",val:"39,820",chg:"+0.65%",up:true},
+  {name:"台灣加權",val:"35,457",chg:"+0.11%",up:true},
+  {name:"S&P 500",val:"6,824",chg:"+0.11%",up:true},
+  {name:"那斯達克",val:"22,982",chg:"+0.34%",up:true},
+  {name:"日經 225",val:"56,503",chg:"-0.74%",up:false},
 ];
 const ALL_NEWS=[
   {cls:"tm",tag:"總經",emoji:"📊",title:"Fed 暗示年內仍有降息空間，美股三大指數小幅收漲",time:"2小時前",src:"Reuters",body:"美國聯準會官員在最新聲明中暗示，若通膨數據持續回落，年內仍有降息空間。\n\n凱特觀點：此訊號對股債市均屬正面，建議維持現有配置，靜待正式降息確認後再大幅調整。"},
@@ -134,11 +134,7 @@ const healthItems=[
   {lb:"保險覆蓋率",v:"55%",s:"建議 70% 以上",p:55,c:"#c47880"},
 ];
 const NOTIFS=[
-  {id:1,icon:"✦",cls:"ni-gold",title:"凱特發布新推薦",desc:"半導體族群低接時機已至，重點留意台積電與聯發科",time:"10分鐘前",unread:true},
-  {id:2,icon:"📈",cls:"ni-blue",title:"股票價格提醒",desc:"台積電突破 900 元，達到您設定的目標價",time:"1小時前",unread:true},
-  {id:3,icon:"🔔",cls:"ni-rose",title:"現增認股開放通知",desc:"本期現增標的已開放認購，名額有限請盡早確認",time:"3小時前",unread:true},
-  {id:4,icon:"✦",cls:"ni-gold",title:"凱特發布配置建議",desc:"第二季配置建議：防禦與成長各半，靜待降息訊號",time:"昨天",unread:false},
-  {id:5,icon:"📅",cls:"ni-green",title:"繳費日提醒",desc:"富衛盈聚天下II 下次繳費日為 2027-03-01",time:"2天前",unread:false},
+  {id:5,icon:"📅",cls:"ni-green",title:"繳費日提醒",desc:"保單繳費提醒將自動顯示於此",time:"",unread:false},
 ];
 // 台灣稅務行事曆（固定日期，每年自動適用）
 const TAX_CALENDAR=[
@@ -152,9 +148,7 @@ const TAX_CALENDAR=[
 ];
 
 const NOTIF_SETTINGS=[
-  {icon:"✦",cls:"ni-gold",name:"凱特推薦更新",key:"kate"},
   {icon:"📈",cls:"ni-blue",name:"股票漲跌警報",key:"stock"},
-  {icon:"🔔",cls:"ni-rose",name:"新標的開放通知",key:"product"},
   {icon:"📅",cls:"ni-green",name:"保單繳費日提醒",key:"payment"},
   {icon:"💱",cls:"ni-blue",name:"匯率大幅波動",key:"fx"},
   {icon:"🗓️",cls:"ni-gold",name:"稅務報稅時程提醒",key:"tax"},
@@ -194,14 +188,14 @@ const S=`
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Serif+TC:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@500;600;700&family=Cinzel:wght@400;500;600&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
-    --ink:#ede9e3;--card:#faf8f4;--card2:#f2efe9;--card3:#e8e4dc;
+    --ink:#ede9e3;--card:#ffffff;--card2:#f5f2ec;--card3:#ebe7df;
     --gold:#9a6e20;--gold2:#b8862a;--gold-dim:rgba(154,110,32,0.10);
     --silver:#5a6878;--silver-dim:rgba(90,104,120,0.10);
     --rose:#b05060;--rose-dim:rgba(176,80,96,0.10);
     --green:#2a8a5a;--green-dim:rgba(42,138,90,0.10);
     --red:#c03040;--blue:#2a5ea8;--blue-dim:rgba(42,94,168,0.10);
-    --td:#2c1e0f;--tm:#4a3520;--tl:#1a1e28;
-    --md:#6b5040;--bl:rgba(140,110,80,0.18);
+    --td:#1a0e05;--tm:#2a1508;--tl:#0e1218;
+    --md:#4a3020;--bl:rgba(140,110,80,0.18);
   }
   html,body{background:var(--ink);}
   .app{max-width:430px;margin:0 auto;min-height:100vh;font-family:'Noto Sans TC',sans-serif;color:var(--tl);position:relative;}
@@ -224,7 +218,7 @@ const S=`
 
   /* ── NAV (4 tabs) ── */
   .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(28,14,5,.98);backdrop-filter:blur(24px);border-top:1px solid rgba(200,160,80,.25);display:flex;padding:10px 0 24px;z-index:100;}
-  .ni{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color:rgba(220,200,170,.55);font-size:15px;letter-spacing:.5px;transition:color .2s;font-family:'Cinzel',serif;position:relative;font-weight:500;}
+  .ni{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color:rgba(220,200,170,.80);font-size:15px;letter-spacing:.5px;transition:color .2s;font-family:'Cinzel',serif;position:relative;font-weight:500;}
   .ni.active{color:#e8c87a;}
   .ni.active::before{content:'';position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:24px;height:2.5px;background:#e8c87a;border-radius:2px;}
   .ni-ic{font-size:24px;}
@@ -247,8 +241,8 @@ const S=`
   /* ── SUB-TABS ── */
   .sub-tabs{display:flex;background:rgba(28,15,8,.3);border-bottom:1px solid rgba(240,242,248,.08);overflow-x:auto;}
   .sub-tabs::-webkit-scrollbar{display:none;}
-  .st{flex-shrink:0;padding:14px 20px;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(245,220,170,.55);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;}
-  .st.active{color:#e8c060;border-bottom-color:#e8c060;}
+  .st{flex-shrink:0;padding:14px 20px;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(245,220,170,.95);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;font-weight:500;}
+  .st.active{color:#f5d060;border-bottom-color:#f5d060;font-weight:700;}
 
   /* ── HOME ── */
   .home-hero{padding:52px 20px 20px;background:linear-gradient(165deg,#0c1420 0%,#1c0f08 100%);position:relative;overflow:hidden;}
@@ -332,7 +326,7 @@ const S=`
   .hld-del-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(216,88,104,.2);background:transparent;font-family:'Cinzel',serif;font-size:15px;color:var(--rose);cursor:pointer;}
   /* 持有分類tab */
   .htab-row{display:flex;margin:0 16px 14px;background:var(--card2);border:1px solid var(--bl);border-radius:12px;overflow:hidden;}
-  .htab{flex:1;padding:11px 4px;text-align:center;font-family:'Cinzel',serif;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .2s;color:var(--md);border-bottom:2px solid transparent;}
+  .htab{flex:1;padding:11px 4px;text-align:center;font-family:'Cinzel',serif;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .2s;color:var(--td);font-weight:500;border-bottom:2px solid transparent;}
   .htab.active{background:rgba(154,110,32,.12);color:#8a5e18;border-bottom-color:#8a5e18;}
 
   /* 健檢 */
@@ -734,7 +728,7 @@ export default function App(){
   // Navigation
   const [tab,setTab]=useState("home");      // home | assets | calc | advisor
   const [assetsSub,setAssetsSub]=useState("holdings");  // holdings | coverage | health
-  const [advisorSub,setAdvisorSub]=useState("articles");   // articles | tools | kattools | qa
+  const [advisorSub,setAdvisorSub]=useState("qa");
   const [liveNews,setLiveNews]=useState([]);
   const [newsLoading,setNewsLoading]=useState(false);
   const [liveIndices,setLiveIndices]=useState(indices);
@@ -749,35 +743,25 @@ export default function App(){
   const USD_TWD=31.5;
   const [holdingsTab,setHoldingsTab]=useState("insurance");
   const INS_BLANK={product:"富邦 — 富域多元貨幣",policyNo:"",policyType:"分紅",paymentTerm:"2年",faceAmountUSD:"",annualPremiumUSD:"",actualCostUSD:"",startYear:String(new Date().getFullYear()),lifeCoverUSD:""};
-  const [insuranceHoldings,setInsuranceHoldings]=useState([
-    {id:1,product:"安達 — 傳承守創V",policyNo:"HRE02-00123",policyType:"分紅",paymentTerm:"2年",faceAmountUSD:500000,annualPremiumUSD:25000,actualCostUSD:48000,startYear:2024,lifeCoverUSD:""},
-    {id:2,product:"富衛 — 盈聚天下II",policyNo:"GFC2-00456",policyType:"壽險",paymentTerm:"5年",faceAmountUSD:300000,annualPremiumUSD:10000,actualCostUSD:49000,startYear:2024,lifeCoverUSD:800000},
-  ]);
+  const [insuranceHoldings,setInsuranceHoldings]=useState([]);
   const [showInsForm,setShowInsForm]=useState(false);
   const [editInsId,setEditInsId]=useState(null);
   const [insForm,setInsForm]=useState(INS_BLANK);
-  const [stockHoldings,setStockHoldings]=useState([
-    {id:1,code:"2330.TW",name:"台積電",shares:100,costPerShare:880,currentPrice:905,currency:"TWD"},
-    {id:2,code:"TSLA",name:"Tesla",shares:50,costPerShare:179.1,currentPrice:175.2,currency:"USD"},
-  ]);
+  const [stockHoldings,setStockHoldings]=useState([]);
   const [showStockForm,setShowStockForm]=useState(false);
   const [editStockId,setEditStockId]=useState(null);
   const [stockForm,setStockForm]=useState({code:"",name:"",shares:"",costPerShare:"",currentPrice:"",currency:"TWD"});
   const [stockCodeInput,setStockCodeInput]=useState("");
   const [stockLookupLoading,setStockLookupLoading]=useState(false);
   const [stockRefreshing,setStockRefreshing]=useState(false);
-  const [fixedHoldings,setFixedHoldings]=useState([
-    {id:1,product:"萬兆豐 — 金益求兆",amountUSD:100000,startDate:"2024-01",lockYears:2,annualRate:6},
-  ]);
+  const [fixedHoldings,setFixedHoldings]=useState([]);
   const [showFixedForm,setShowFixedForm]=useState(false);
   const [editFixedId,setEditFixedId]=useState(null);
   const [fixedForm,setFixedForm]=useState({product:"萬兆豐 — 金益求金",amountUSD:"",startDate:"",lockYears:"1",annualRate:"6"});
   // 貴金屬
   const METAL_BLANK={product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""};
   const RE_BLANK={name:"",propertyType:"住宅",address:"",marketValue:"",govValue:"",mortgage:"",purchaseYear:"",purchasePrice:"",annualReturn:"",currency:"TWD",notes:""};
-  const [metalHoldings,setMetalHoldings]=useState([
-    {id:1,product:"萬兆豐貴金屬 — 實體黃金",grams:1000,costPerGram:95,currentPricePerGram:106,purchaseDate:"2024-01"},
-  ]);
+  const [metalHoldings,setMetalHoldings]=useState([]);
   const [showMetalForm,setShowMetalForm]=useState(false);
   const [editMetalId,setEditMetalId]=useState(null);
   const [metalForm,setMetalForm]=useState({product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""});
@@ -821,6 +805,8 @@ export default function App(){
   const [fxRates,setFxRates]=useState({USD:1,TWD:31.5,HKD:7.82,SGD:1.34,JPY:149.5,EUR:0.92,CNY:7.24});
   const [fxLoading,setFxLoading]=useState(false);
   const [fxUpdatedAt,setFxUpdatedAt]=useState("");
+  const [metalPrices,setMetalPrices]=useState({goldUSD:"4,733",silverUSD:"75.40",goldTWD:"4,794",platinumUSD:"980",goldUSDChg:"+0.8%",silverUSDChg:"+1.2%",goldTWDChg:"+0.8%",platinumChg:"-0.3%",goldUp:true,silverUp:true,platinumUp:false,updatedAt:""});
+  const [metalPricesLoading,setMetalPricesLoading]=useState(false);
   // 72法則
   const [rule72Rate,setRule72Rate]=useState("");
   // 通膨侵蝕
@@ -867,7 +853,8 @@ export default function App(){
   const [qaLoading,setQaLoading]=useState(false);
   // Notifs
   const [notifs,setNotifs]=useState(NOTIFS);
-  const [notifSettings,setNotifSettings]=useState({kate:true,stock:true,product:true,payment:true,fx:false,tax:true});
+  const [notifSettings,setNotifSettings]=useState({stock:true,payment:true,fx:false,tax:true});
+  const [notifFilter,setNotifFilter]=useState("all");
   // Onboarding
   const ONBOARDING_STEPS=[{title:"基本資料",icon:"👤"},{title:"財務狀況",icon:"💰"},{title:"目標與偏好",icon:"🎯"},{title:"其他資訊",icon:"📋"}];
   const GOAL_OPTIONS=["傳承規劃","退休規劃","資產保全","海外配置","節稅規劃","積極增值","穩健儲蓄"];
@@ -875,10 +862,7 @@ export default function App(){
   const [onboardingStep,setOnboardingStep]=useState(0);
   const [onboardingData,setOnboardingData]=useState({name:"",age:"",occupation:"",annualIncome:"",assets:"",goals:[],riskLevel:"穩健",concerns:"",referral:""});
   const [onboardingDone,setOnboardingDone]=useState(false);
-  const [onboardingList,setOnboardingList]=useState([
-    {id:1,name:"陳小雯",date:"2026/04/05",status:"完成",risk:"穩健",goals:["傳承規劃","退休規劃"]},
-    {id:2,name:"林志豪",date:"2026/04/04",status:"待跟進",risk:"積極",goals:["海外配置","積極增值"]},
-  ]);
+  const [onboardingList,setOnboardingList]=useState([]);
   const threadRef=useRef(null);
   const qaRef=useRef(null);
 
@@ -966,6 +950,67 @@ export default function App(){
       .catch(()=>setIndicesLoading(false));
   },[loggedIn]);
 
+  useEffect(()=>{
+    if(!loggedIn)return;
+    fetchHomeNews();
+    refreshMetalPrices();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[loggedIn]);
+
+  useEffect(()=>{
+    if(!loggedIn)return;
+    refreshMetalPrices();
+  },[loggedIn]);
+
+  const refreshMetalPrices=async()=>{
+    if(metalPricesLoading)return;
+    setMetalPricesLoading(true);
+    try{
+      const raw=await searchNews("gold silver platinum price today USD per ounce latest spot price");
+      const result=await generateAI(`根據以下貴金屬行情，整理最新價格與漲跌幅。只輸出純JSON：{"goldUSD":"數字加逗號","silverUSD":"數字","goldTWD":"數字","platinumUSD":"數字","goldUSDChg":"+/-百分比%","silverUSDChg":"+/-百分比%","goldTWDChg":"+/-百分比%","platinumChg":"+/-百分比%","goldUp":true或false,"silverUp":true或false,"platinumUp":true或false}
+資料：${raw.slice(0,2000)}`,400);
+      const cleaned=result.replace(/\`\`\`json|\`\`\`/g,"").trim();
+      const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+      if(parsed.goldUSD){
+        const now=new Date();
+        const goldUSDNum=parseFloat(String(parsed.goldUSD).replace(/,/g,""))||0;
+        const goldTWDPerGram=goldUSDNum>0?Math.round(goldUSDNum/31.1035*USD_TWD).toLocaleString():"N/A";
+        setMetalPrices({...parsed,goldTWD:goldTWDPerGram,goldTWDChg:parsed.goldUSDChg||"",updatedAt:now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+" 更新"});
+        showToast("✓ 貴金屬行情已更新");
+      }
+    }catch{showToast("⚠ 更新失敗");}
+    setMetalPricesLoading(false);
+  };
+
+  const fetchHomeNews=async()=>{
+    setNewsLoading(true);
+    try{
+      const raw=await searchNews("台灣股市 美股 全球財經 最新重要新聞 今日");
+      const result=await generateAI(`根據以下新聞，整理5則最重要的財經新聞，輸出純JSON（不加markdown）：{"news":[{"tag":"分類(總經/股市/個股/台灣資產)","emoji":"一個emoji","title":"標題20字內","src":"來源","time":"幾小時前","body":"內文50字加凱特觀點50字，用\n\n分隔"}]}
+新聞資料：${raw.slice(0,3000)}`,800);
+      const cleaned=result.replace(/\`\`\`json|\`\`\`/g,"").trim();
+      const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+      if(data.news?.length>0)setLiveNews(data.news);
+    }catch(e){console.error(e);}
+    setNewsLoading(false);
+  };
+
+  const refreshIndices=()=>{
+    if(indicesLoading)return;
+    setIndicesLoading(true);
+    searchNews("台灣加權指數 S&P500 那斯達克 日經225 今日最新收盤點數 漲跌幅")
+      .then(raw=>generateAI(`根據以下市場資訊，整理4個指數的最新數據，輸出純JSON（不加markdown）：{"indices":[{"name":"台灣加權","val":"點數數字加逗號","chg":"+/-百分比%","up":true或false},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n資料：${raw.slice(0,2000)}`,600))
+      .then(raw=>{
+        try{
+          const cleaned=raw.replace(/```json|```/g,"").trim();
+          const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+          if(data.indices?.length>0){setLiveIndices(data.indices);showToast("✓ 指數已更新");}
+        }catch{showToast("⚠ 更新失敗，請稍後再試");}
+        setIndicesLoading(false);
+      })
+      .catch(()=>{setIndicesLoading(false);showToast("⚠ 更新失敗");});
+  };
+
   const handleRegister=async()=>{
     if(!acct.trim()||!pwd||loginLoading)return;
     if(pwd!==regPwd2){setLoginError("兩次密碼不一致");return;}
@@ -999,21 +1044,10 @@ export default function App(){
     const localUser=LOCAL_ACCOUNTS.find(u=>u.username===acct.trim()&&u.password===pwd);
     if(localUser){
       setCurrentUser(localUser);setIsKate(localUser.is_kate);setRisk(localUser.risk_level||"穩健");
-      // 注入預設示範持倉
-      setInsuranceHoldings([
-        {id:1,product:"安達 — 傳承守創V",policyNo:"HRE02-00123",policyType:"分紅",paymentTerm:"2年",faceAmountUSD:500000,annualPremiumUSD:25000,actualCostUSD:48000,startYear:2024,lifeCoverUSD:""},
-        {id:2,product:"富衛FWD — 盈聚天下 分紅儲蓄",policyNo:"GFC2-00456",policyType:"壽險",paymentTerm:"5年",faceAmountUSD:300000,annualPremiumUSD:10000,actualCostUSD:49000,startYear:2024,lifeCoverUSD:800000},
-      ]);
-      setStockHoldings([
-        {id:1,code:"2330.TW",name:"台積電",shares:100,costPerShare:880,currentPrice:905,currency:"TWD"},
-        {id:2,code:"TSLA",name:"Tesla",shares:50,costPerShare:179.1,currentPrice:175.2,currency:"USD"},
-      ]);
-      setFixedHoldings([
-        {id:1,product:"萬兆豐 — 金益求兆",amountUSD:100000,startDate:"2024-01",lockYears:2,annualRate:6},
-      ]);
-      setMetalHoldings([
-        {id:1,product:"萬兆豐貴金屬 — 實體黃金",grams:1000,costPerGram:95,currentPricePerGram:106,purchaseDate:"2024-01"},
-      ]);
+      setInsuranceHoldings([]);
+      setStockHoldings([]);
+      setFixedHoldings([]);
+      setMetalHoldings([]);
       setLoggedIn(true);setLoginLoading(false);return;
     }
     // 嘗試 Supabase
@@ -1535,10 +1569,7 @@ export default function App(){
           <button className="l-btn" onClick={loginMode==="login"?handleLogin:handleRegister} disabled={loginLoading||!acct||!pwd} style={{opacity:loginLoading||!acct||!pwd?0.5:1}}>
             {loginLoading?(loginMode==="login"?"驗證中…":"建立帳號中…"):(loginMode==="login"?"LOGIN":"建立帳號")}
           </button>
-          {loginMode==="login"&&<div style={{background:"rgba(200,168,75,0.08)",border:"1px solid rgba(200,168,75,0.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:11,color:"var(--md)",lineHeight:1.7,textAlign:"center"}}>
-            <span style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--gold)",display:"block",marginBottom:4}}>DEMO ACCOUNT</span>
-            帳號：<b style={{color:"var(--td)"}}>Kate</b>　密碼：<b style={{color:"var(--td)"}}>kate2026</b>
-          </div>}
+
           <div className="l-foot">{loginMode==="login"?"忘記密碼？請聯絡您的專屬顧問":"註冊後即可開始管理您的資產"}</div>
         </div>
       </div>
@@ -1720,19 +1751,29 @@ export default function App(){
             </div>
 
             {/* 股市指數 */}
-            <div className="sec">市場指數{indicesLoading&&<span style={{fontFamily:"'Noto Sans TC',sans-serif",fontSize:10,letterSpacing:0,color:"rgba(245,225,185,.4)",marginLeft:8}}>更新中…</span>}</div>
+            <div className="sec" style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:16}}>
+              <span>市場指數{indicesLoading&&<span style={{fontFamily:"'Noto Sans TC',sans-serif",fontSize:10,letterSpacing:0,color:"rgba(245,225,185,.4)",marginLeft:8}}>更新中…</span>}</span>
+              <button onClick={refreshIndices} disabled={indicesLoading} style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"4px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:indicesLoading?"rgba(154,110,32,.4)":"#9a6e20",cursor:indicesLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:4}}>
+                <span style={{display:"inline-block",animation:indicesLoading?"spin 1s linear infinite":"none"}}>↻</span> 刷新
+              </button>
+            </div>
             <div className="idx" style={{margin:"0 16px 12px"}}>
               {liveIndices.map((m,i)=><div className="ii" key={i}><div className="ii-n">{m.name}</div><div className="ii-v">{m.val}</div><div className={`ii-c ${m.up?"up":"dn"}`}>{m.chg}</div></div>)}
             </div>
 
             {/* 黃金白銀 */}
-            <div className="sec">貴金屬行情</div>
+            <div className="sec" style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:16}}>
+              <span>貴金屬行情{metalPrices.updatedAt&&<span style={{fontFamily:"'Noto Sans TC',sans-serif",fontSize:10,letterSpacing:0,color:"rgba(245,225,185,.4)",marginLeft:8}}>{metalPrices.updatedAt}</span>}</span>
+              <button onClick={refreshMetalPrices} disabled={metalPricesLoading} style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"4px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:metalPricesLoading?"rgba(154,110,32,.4)":"#9a6e20",cursor:metalPricesLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:4}}>
+                <span style={{display:"inline-block",animation:metalPricesLoading?"spin 1s linear infinite":"none"}}>↻</span> 刷新
+              </button>
+            </div>
             <div style={{margin:"0 16px 12px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               {[
-                {name:"黃金",unit:"USD/oz",price:"3,312",chg:"+1.8%",up:true,icon:"🥇"},
-                {name:"白銀",unit:"USD/oz",price:"32.45",chg:"+0.6%",up:true,icon:"🥈"},
-                {name:"黃金",unit:"TWD/g",price:"3,348",chg:"+1.8%",up:true,icon:"💛"},
-                {name:"鉑金",unit:"USD/oz",price:"986",chg:"-0.3%",up:false,icon:"⬜"},
+                {name:"黃金",unit:"USD/oz",price:metalPrices.goldUSD,chg:metalPrices.goldUSDChg,up:metalPrices.goldUp,icon:"🥇"},
+                {name:"白銀",unit:"USD/oz",price:metalPrices.silverUSD,chg:metalPrices.silverUSDChg,up:metalPrices.silverUp,icon:"🥈"},
+                {name:"黃金",unit:"TWD/g",price:metalPrices.goldTWD,chg:metalPrices.goldTWDChg,up:metalPrices.goldUp,icon:"💛"},
+                {name:"鉑金",unit:"USD/oz",price:metalPrices.platinumUSD,chg:metalPrices.platinumChg,up:metalPrices.platinumUp,icon:"⬜"},
               ].map((m,i)=>(
                 <div key={i} style={{background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"12px 14px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
@@ -1748,9 +1789,42 @@ export default function App(){
               ))}
             </div>
 
-            {/* 新聞精選 */}
-            <div className="sec">新聞精選</div>
-            {ALL_NEWS.slice(0,4).map((n,i)=>(
+            {/* 凱特最新發布 */}
+            {publishedPicks&&(
+              <>
+                <div className="sec">凱特最新觀點</div>
+                <div style={{margin:"0 16px 12px",background:"linear-gradient(135deg,#1e1005 0%,#2a1208 50%,#1a0e06 100%)",border:"1px solid rgba(200,168,75,.25)",borderRadius:16,padding:16,cursor:"pointer"}} onClick={()=>setScreen({type:"article",data:publishedPicks})}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:"var(--gold)",textTransform:"uppercase",marginBottom:8}}>✦ 最新發布 · {publishedPicks.publishedAt||"今日"}</div>
+                  <div style={{fontFamily:"'Noto Serif TC',serif",fontSize:15,fontWeight:600,color:"#f5ead8",lineHeight:1.5,marginBottom:8}}>{publishedPicks.title}</div>
+                  <div style={{fontSize:13,color:"rgba(245,234,216,.55)",lineHeight:1.7}}>{(publishedPicks.body||"").slice(0,80)}…</div>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--gold)",marginTop:10}}>閱讀全文 →</div>
+                </div>
+              </>
+            )}
+
+            {/* 即時新聞 */}
+            <div className="sec" style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:16}}>
+              <span>即時財經新聞</span>
+              <button onClick={fetchHomeNews} disabled={newsLoading} style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"4px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:newsLoading?"rgba(154,110,32,.4)":"#9a6e20",cursor:newsLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:4}}>
+                <span style={{display:"inline-block",animation:newsLoading?"spin 1s linear infinite":"none"}}>↻</span>{newsLoading?"更新中":"刷新"}
+              </button>
+            </div>
+            {newsLoading&&liveNews.length===0&&(
+              <div style={{padding:"20px 16px"}}>
+                {[1,2,3].map(i=>(
+                  <div key={i} style={{background:"var(--card)",borderRadius:14,padding:14,marginBottom:10,display:"flex",gap:12,alignItems:"center"}}>
+                    <div style={{width:40,height:40,borderRadius:10,background:"var(--card2)"}}/>
+                    <div style={{flex:1}}>
+                      <div style={{height:10,background:"var(--card2)",borderRadius:4,marginBottom:8,width:"40%"}}/>
+                      <div style={{height:14,background:"var(--card2)",borderRadius:4,marginBottom:6}}/>
+                      <div style={{height:10,background:"var(--card2)",borderRadius:4,width:"60%"}}/>
+                    </div>
+                  </div>
+                ))}
+                <div style={{textAlign:"center",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"rgba(245,225,185,.3)",marginTop:8}}>正在抓取最新新聞…</div>
+              </div>
+            )}
+            {(liveNews.length>0?liveNews:liveNews).map((n,i)=>(
               <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})}>
                 <div className="nc-emoji">{n.emoji||"📰"}</div>
                 <div style={{flex:1,minWidth:0}}>
@@ -2757,7 +2831,7 @@ export default function App(){
               </div>
             </div>
             <div className="sub-tabs">
-              {[{id:"articles",label:"📖 凱特文章"},{id:"tools",label:"📋 投資工具"},{id:"notifs",label:"🔔 通知"},{id:"kattools",label:"🛠️ 顧問工具"},{id:"qa",label:"🤖 AI 問答"}].map(t=>(
+              {[{id:"qa",label:"🤖 AI 財商"},{id:"tools",label:"📋 項目資訊"},{id:"notifs",label:"🔔 通知"}].map(t=>(
                 <div key={t.id} className={`st ${advisorSub===t.id?"active":""}`} onClick={()=>setAdvisorSub(t.id)} style={{position:"relative"}}>
                   {t.id==="notifs"&&notifs.filter(n=>n.unread).length>0&&<span style={{position:"absolute",top:4,right:4,minWidth:14,height:14,borderRadius:7,background:"var(--rose)",color:"#fff",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,padding:"0 3px"}}>{notifs.filter(n=>n.unread).length}</span>}
                   {t.label}
@@ -2771,7 +2845,6 @@ export default function App(){
 
                 {/* 分類篩選 */}
                 {(()=>{
-                  const [notifFilter,setNotifFilter]=React.useState("all");
                   const taxItems=notifs.filter(n=>n.isTax);
                   const payItems=notifs.filter(n=>n.isPayment);
                   const otherItems=notifs.filter(n=>!n.isTax&&!n.isPayment);
@@ -3321,6 +3394,50 @@ export default function App(){
                   )}
                 </div>
 
+                {/* 匯出客戶資料 */}
+                <div className="sec">匯出客戶資料</div>
+                <div style={{margin:"0 16px 24px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"16px"}}>
+                  <div style={{fontSize:13,color:"var(--md)",marginBottom:16,lineHeight:1.7}}>將所有客戶資料整理成 CSV 格式，可直接用 Google Sheets 或 Excel 開啟。</div>
+                  {[
+                    {label:"📋 匯出客戶 Onboarding 名單",desc:"姓名、年齡、職業、目標、風險偏好等",fn:()=>{
+                      const headers=["姓名","建檔日期","狀態","風險偏好","財務目標","年齡","職業","年收入","可投資資產","主要擔憂","來源管道"];
+                      const rows=onboardingList.map(c=>[c.name||"",c.date||"",c.status||"",c.risk||"",Array.isArray(c.goals)?c.goals.join("、"):"",c.age||"",c.occupation||"",c.annualIncome||"",c.assets||"",c.concerns||"",c.referral||""]);
+                      const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+                      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+                      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`凱特客戶名單_${new Date().toLocaleDateString("zh-TW").replace(/\//g,"-")}.csv`;a.click();
+                      showToast("✓ 已下載客戶名單");
+                    }},
+                    {label:"🛡️ 匯出保單持倉",desc:"產品、保單號、年繳保費、投保額、起保年份等",fn:()=>{
+                      const headers=["產品","保單號","保單類型","繳費年期","起保年份","年繳保費(USD)","投保額(USD)","實際投入(USD)"];
+                      const rows=insuranceHoldings.map(h=>[h.product||"",h.policyNo||"",h.policyType||"",h.paymentTerm||"",h.startYear||"",h.annualPremiumUSD||"",h.faceAmountUSD||"",h.actualCostUSD||""]);
+                      const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+                      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+                      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`凱特保單持倉_${new Date().toLocaleDateString("zh-TW").replace(/\//g,"-")}.csv`;a.click();
+                      showToast("✓ 已下載保單持倉");
+                    }},
+                    {label:"📊 匯出完整資產總覽",desc:"保險、股票、固收、貴金屬、房地產全部整合",fn:()=>{
+                      const rows=[["類別","名稱/代碼","數量/重量","成本","現值","幣別","備註"]];
+                      insuranceHoldings.forEach(h=>rows.push(["保險",h.product,h.paymentTerm,h.annualPremiumUSD,calcInsTotalCost(h),"USD",h.policyNo||""]));
+                      stockHoldings.forEach(h=>rows.push(["股票",`${h.name}(${h.code})`,h.shares,h.costPerShare,h.currentPrice,h.currency,""]));
+                      fixedHoldings.forEach(h=>rows.push(["固收",h.product,"",h.amountUSD,calcFixedValue(h),"USD",`${h.annualRate}% ${h.lockYears}年`]));
+                      metalHoldings.forEach(h=>rows.push(["貴金屬",h.product,`${h.grams}g`,h.costPerGram,h.currentPricePerGram,"USD/g",h.purchaseDate||""]));
+                      realEstateHoldings.forEach(h=>rows.push(["房地產",h.name,h.propertyType||"",h.purchasePrice||"",h.marketValue||"",h.currency,h.address||""]));
+                      const csv=rows.map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+                      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+                      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`凱特資產總覽_${new Date().toLocaleDateString("zh-TW").replace(/\//g,"-")}.csv`;a.click();
+                      showToast("✓ 已下載資產總覽");
+                    }},
+                  ].map((item,i)=>(
+                    <div key={i} onClick={item.fn} style={{display:"flex",alignItems:"center",gap:12,padding:"14px",borderRadius:12,border:"1px solid var(--bl)",background:"var(--card2)",cursor:"pointer",marginBottom:10}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,fontWeight:600,color:"var(--td)",marginBottom:3}}>{item.label}</div>
+                        <div style={{fontSize:12,color:"var(--md)"}}>{item.desc}</div>
+                      </div>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#8a5e18",background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.2)",borderRadius:8,padding:"5px 12px",flexShrink:0}}>下載 CSV</div>
+                    </div>
+                  ))}
+                </div>
+
               </div>
             )}
 
@@ -3388,9 +3505,10 @@ export default function App(){
               {["分紅","壽險"].map(t=>(<div key={t} className={`hf-type-chip ${insForm.policyType===t?"active":""}`} onClick={()=>setInsForm(p=>({...p,policyType:t}))} style={{flex:1,textAlign:"center",padding:"10px"}}>{t}</div>))}
             </div>
             <div className="hf-lbl">繳費年期</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {["躉繳","2年","5年","12年"].map(t=>(<div key={t} className={`hf-type-chip ${insForm.paymentTerm===t?"active":""}`} onClick={()=>setInsForm(p=>({...p,paymentTerm:t}))} style={{padding:"8px 14px"}}>{t}</div>))}
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+              {["躉繳","2年","5年","10年","12年","20年"].map(t=>(<div key={t} className={`hf-type-chip ${insForm.paymentTerm===t?"active":""}`} onClick={()=>setInsForm(p=>({...p,paymentTerm:t}))} style={{padding:"8px 14px"}}>{t}</div>))}
             </div>
+            <input className="hf-inp" placeholder="或自行輸入，例如：15年、終身" value={insForm.paymentTerm} onChange={e=>setInsForm(p=>({...p,paymentTerm:e.target.value}))}/>
             <div className="hf-lbl">起保年份（選填）</div>
             <input className="hf-inp" type="number" placeholder="例如：2024（可留空）" value={insForm.startYear} onChange={e=>setInsForm(p=>({...p,startYear:e.target.value}))}/>
             <div className="hf-lbl">年繳保費（USD）</div>
