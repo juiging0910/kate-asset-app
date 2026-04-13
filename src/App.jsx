@@ -140,12 +140,24 @@ const NOTIFS=[
   {id:4,icon:"✦",cls:"ni-gold",title:"凱特發布配置建議",desc:"第二季配置建議：防禦與成長各半，靜待降息訊號",time:"昨天",unread:false},
   {id:5,icon:"📅",cls:"ni-green",title:"繳費日提醒",desc:"富衛盈聚天下II 下次繳費日為 2027-03-01",time:"2天前",unread:false},
 ];
+// 台灣稅務行事曆（固定日期，每年自動適用）
+const TAX_CALENDAR=[
+  {key:"income_tax",   icon:"💼",name:"綜合所得稅申報",    month:5, day:1,  endMonth:5, endDay:31, desc:"114年度綜所稅申報期間",        warnDays:30},
+  {key:"house_tax",    icon:"🏠",name:"房屋稅開徵",        month:5, day:1,  endMonth:6, endDay:2,  desc:"房屋稅繳納期限",              warnDays:14},
+  {key:"land_tax",     icon:"🌍",name:"地價稅開徵",        month:11,day:1,  endMonth:11,endDay:30, desc:"地價稅繳納期限",              warnDays:14},
+  {key:"car_tax",      icon:"🚗",name:"牌照稅申報繳納",    month:4, day:1,  endMonth:4, endDay:30, desc:"汽機車牌照稅繳納期限",         warnDays:14},
+  {key:"fuel_tax",     icon:"⛽",name:"燃料使用費開徵",    month:7, day:1,  endMonth:9, endDay:30, desc:"燃料使用費繳納期限",           warnDays:14},
+  {key:"gift_tax",     icon:"🎁",name:"贈與稅申報提醒",    month:12,day:15, endMonth:12,endDay:31, desc:"年底前善用 244 萬免稅額",      warnDays:30},
+  {key:"estate_plan",  icon:"📋",name:"遺產稅試算提醒",    month:1, day:1,  endMonth:1, endDay:31, desc:"新年度資產傳承規劃時間",        warnDays:7},
+];
+
 const NOTIF_SETTINGS=[
   {icon:"✦",cls:"ni-gold",name:"凱特推薦更新",key:"kate"},
   {icon:"📈",cls:"ni-blue",name:"股票漲跌警報",key:"stock"},
   {icon:"🔔",cls:"ni-rose",name:"新標的開放通知",key:"product"},
-  {icon:"📅",cls:"ni-green",name:"繳費日提醒",key:"payment"},
+  {icon:"📅",cls:"ni-green",name:"保單繳費日提醒",key:"payment"},
   {icon:"💱",cls:"ni-blue",name:"匯率大幅波動",key:"fx"},
+  {icon:"🗓️",cls:"ni-gold",name:"稅務報稅時程提醒",key:"tax"},
 ];
 const TERMS=[
   {word:"殖利率",en:"Yield",icon:"📈",iconCls:"ti-blue",cat:"債市",simple:"你借錢給政府或公司，他們每年還你多少利息的百分比。殖利率越高，代表這筆錢幫你賺的利息越多。",detail:"殖利率是債券投資的核心指標。當市場對未來悲觀時，大家搶買債券避險，債券價格上漲，殖利率就會下降。",example:"美國10年期公債殖利率從5%降到4.28%，代表市場有更多人搶著買這張債券，認為未來情況不太妙。"},
@@ -182,14 +194,14 @@ const S=`
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Serif+TC:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@500;600;700&family=Cinzel:wght@400;500;600&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
-    --ink:#08090e;--card:#f0f2f5;--card2:#e8eaee;--card3:#dde0e6;
-    --gold:#c8a84b;--gold2:#deba60;--gold-dim:rgba(200,168,75,0.13);
-    --silver:#94a8c0;--silver-dim:rgba(148,168,192,0.13);
-    --rose:#c47880;--rose-dim:rgba(196,120,128,0.12);
-    --green:#3aaa78;--green-dim:rgba(58,170,120,0.12);
-    --red:#d85868;--blue:#4878c0;--blue-dim:rgba(72,120,192,0.12);
-    --td:#1a1e28;--tm:#4a5268;--tl:#f0f2f8;
-    --md:#6a7890;--bl:rgba(200,210,224,0.42);
+    --ink:#ede9e3;--card:#faf8f4;--card2:#f2efe9;--card3:#e8e4dc;
+    --gold:#9a6e20;--gold2:#b8862a;--gold-dim:rgba(154,110,32,0.10);
+    --silver:#5a6878;--silver-dim:rgba(90,104,120,0.10);
+    --rose:#b05060;--rose-dim:rgba(176,80,96,0.10);
+    --green:#2a8a5a;--green-dim:rgba(42,138,90,0.10);
+    --red:#c03040;--blue:#2a5ea8;--blue-dim:rgba(42,94,168,0.10);
+    --td:#2c1e0f;--tm:#4a3520;--tl:#1a1e28;
+    --md:#6b5040;--bl:rgba(140,110,80,0.18);
   }
   html,body{background:var(--ink);}
   .app{max-width:430px;margin:0 auto;min-height:100vh;font-family:'Noto Sans TC',sans-serif;color:var(--tl);position:relative;}
@@ -197,101 +209,101 @@ const S=`
 
   /* ── LOGIN ── */
   .login{min-height:100vh;display:flex;flex-direction:column;}
-  .lt{flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding:64px 36px 44px;background:linear-gradient(170deg,#08090e 0%,#0c1320 65%,#090e18 100%);position:relative;overflow:hidden;}
+  .lt{flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding:64px 36px 44px;background:linear-gradient(170deg,#1a0c05 0%,#2a1608 65%,#1c0e05 100%);position:relative;overflow:hidden;}
   .lt::before{content:'';position:absolute;top:-80px;left:-60px;width:320px;height:320px;background:radial-gradient(circle,rgba(200,168,75,.09) 0%,transparent 70%);}
-  .lb{background:var(--card);padding:36px 32px 52px;border-radius:26px 26px 0 0;}
-  .l-en{font-family:'Cinzel',serif;font-size:10px;letter-spacing:6px;color:var(--gold);opacity:.7;margin-bottom:14px;text-transform:uppercase;}
+  .lb{background:#faf8f4;padding:36px 32px 52px;border-radius:26px 26px 0 0;}
+  .l-en{font-family:'Cinzel',serif;font-size:14px;letter-spacing:6px;color:var(--gold);opacity:.7;margin-bottom:14px;text-transform:uppercase;}
   .l-brand{font-family:'Noto Serif TC',serif;font-size:42px;font-weight:600;color:#f0f2f8;line-height:1.2;letter-spacing:4px;margin-bottom:8px;}
   .l-brand span{color:var(--gold);}
-  .l-tag{font-family:'Cinzel',serif;font-size:11px;letter-spacing:5px;color:rgba(240,242,248,.3);}
-  .l-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--md);text-transform:uppercase;margin-bottom:8px;}
+  .l-tag{font-family:'Cinzel',serif;font-size:15px;letter-spacing:5px;color:rgba(240,242,248,.3);}
+  .l-lbl{font-family:'Cinzel',serif;font-size:14px;letter-spacing:3px;color:var(--md);text-transform:uppercase;margin-bottom:8px;}
   .l-inp{width:100%;background:#fff;border:1px solid var(--bl);border-radius:12px;padding:15px 18px;color:var(--td);font-size:15px;font-family:'Noto Sans TC',sans-serif;margin-bottom:18px;outline:none;transition:border-color .25s;}
   .l-inp:focus{border-color:var(--gold);}
-  .l-btn{width:100%;padding:17px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:13px;font-weight:600;letter-spacing:5px;cursor:pointer;}
-  .l-foot{text-align:center;font-size:11px;color:var(--md);margin-top:18px;}
+  .l-btn{width:100%;padding:17px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:15px;font-weight:600;letter-spacing:5px;cursor:pointer;}
+  .l-foot{text-align:center;font-size:15px;color:var(--md);margin-top:18px;}
 
   /* ── NAV (4 tabs) ── */
-  .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(8,9,14,.97);backdrop-filter:blur(24px);border-top:1px solid rgba(240,242,245,.07);display:flex;padding:10px 0 24px;z-index:100;}
-  .ni{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color:rgba(240,242,248,.38);font-size:11px;letter-spacing:.5px;transition:color .2s;font-family:'Cinzel',serif;position:relative;font-weight:500;}
-  .ni.active{color:var(--gold);}
-  .ni.active::before{content:'';position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:20px;height:2px;background:var(--gold);border-radius:2px;}
-  .ni-ic{font-size:22px;}
-  .ni-badge{position:absolute;top:-2px;right:50%;transform:translateX(140%);width:15px;height:15px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;}
+  .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(28,14,5,.98);backdrop-filter:blur(24px);border-top:1px solid rgba(200,160,80,.25);display:flex;padding:10px 0 24px;z-index:100;}
+  .ni{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color:rgba(220,200,170,.55);font-size:15px;letter-spacing:.5px;transition:color .2s;font-family:'Cinzel',serif;position:relative;font-weight:500;}
+  .ni.active{color:#e8c87a;}
+  .ni.active::before{content:'';position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:24px;height:2.5px;background:#e8c87a;border-radius:2px;}
+  .ni-ic{font-size:24px;}
+  .ni-badge{position:absolute;top:-2px;right:50%;transform:translateX(140%);width:15px;height:15px;background:var(--red);border-radius:50%;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;}
 
   /* ── SHARED ── */
-  .ph{padding:52px 22px 24px;background:linear-gradient(165deg,#0c1420 0%,#08090e 100%);position:relative;overflow:hidden;}
+  .ph{padding:52px 22px 24px;background:linear-gradient(165deg,#0c1420 0%,#1c0f08 100%);position:relative;overflow:hidden;}
   .ph::after{content:'';position:absolute;top:-50px;right:-50px;width:220px;height:220px;background:radial-gradient(circle,rgba(200,168,75,.07) 0%,transparent 65%);pointer-events:none;}
-  .ph-en{font-family:'Cinzel',serif;font-size:9px;letter-spacing:5px;color:var(--gold);opacity:.6;text-transform:uppercase;margin-bottom:8px;}
-  .ph-t{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#f0f2f8;letter-spacing:1px;}
-  .ph-s{font-size:11px;color:rgba(240,242,248,.38);letter-spacing:1.5px;margin-top:5px;}
-  .sec{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(240,242,248,.28);text-transform:uppercase;padding:18px 18px 10px;display:flex;align-items:center;gap:12px;}
+  .ph-en{font-family:'Cinzel',serif;font-size:15px;letter-spacing:5px;color:var(--gold);opacity:.6;text-transform:uppercase;margin-bottom:8px;}
+  .ph-t{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#f0f2f8;letter-spacing:1px;}
+  .ph-s{font-size:15px;color:rgba(240,242,248,.38);letter-spacing:1.5px;margin-top:5px;}
+  .sec{font-family:'Cinzel',serif;font-size:15px;letter-spacing:4px;color:rgba(240,242,248,.28);text-transform:uppercase;padding:18px 18px 10px;display:flex;align-items:center;gap:12px;}
   .sec::after{content:'';flex:1;height:1px;background:rgba(240,242,245,.07);}
-  .back-btn{display:inline-flex;align-items:center;gap:6px;position:absolute;top:52px;left:16px;z-index:10;background:rgba(8,9,14,.6);backdrop-filter:blur(8px);border:1px solid rgba(240,242,248,.12);border-radius:20px;padding:6px 14px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:rgba(240,242,248,.6);cursor:pointer;}
-  .toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:rgba(19,24,36,.95);backdrop-filter:blur(12px);border:1px solid rgba(240,242,245,.1);border-radius:14px;padding:14px 20px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:var(--tl);z-index:400;white-space:nowrap;animation:fadeup .3s ease;}
+  .back-btn{display:inline-flex;align-items:center;gap:6px;position:absolute;top:52px;left:16px;z-index:10;background:rgba(28,15,8,.6);backdrop-filter:blur(8px);border:1px solid rgba(240,242,248,.12);border-radius:20px;padding:6px 14px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:rgba(240,242,248,.6);cursor:pointer;}
+  .toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:rgba(32,18,8,.95);backdrop-filter:blur(12px);border:1px solid rgba(240,242,245,.1);border-radius:14px;padding:14px 20px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--tl);z-index:400;white-space:nowrap;animation:fadeup .3s ease;}
   @keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-  .add-btn{margin:12px 16px 0;width:calc(100% - 32px);background:transparent;border:1px dashed rgba(200,168,75,.25);border-radius:12px;padding:13px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(200,168,75,.4);cursor:pointer;transition:all .2s;display:block;}
+  .add-btn{margin:12px 16px 0;width:calc(100% - 32px);background:transparent;border:1px dashed rgba(200,168,75,.25);border-radius:12px;padding:13px;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(200,168,75,.4);cursor:pointer;transition:all .2s;display:block;}
   .add-btn:hover{border-color:var(--gold);color:var(--gold);}
 
   /* ── SUB-TABS ── */
-  .sub-tabs{display:flex;background:rgba(240,242,245,.04);border-bottom:1px solid rgba(240,242,245,.07);overflow-x:auto;}
+  .sub-tabs{display:flex;background:rgba(28,15,8,.3);border-bottom:1px solid rgba(240,242,248,.08);overflow-x:auto;}
   .sub-tabs::-webkit-scrollbar{display:none;}
-  .st{flex-shrink:0;padding:13px 18px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:rgba(240,242,248,.32);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;}
-  .st.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .st{flex-shrink:0;padding:14px 20px;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(245,220,170,.55);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;}
+  .st.active{color:#e8c060;border-bottom-color:#e8c060;}
 
   /* ── HOME ── */
-  .home-hero{padding:52px 20px 20px;background:linear-gradient(165deg,#0c1420 0%,#08090e 100%);position:relative;overflow:hidden;}
+  .home-hero{padding:52px 20px 20px;background:linear-gradient(165deg,#0c1420 0%,#1c0f08 100%);position:relative;overflow:hidden;}
   .home-hero::before{content:'';position:absolute;top:-60px;right:-40px;width:280px;height:280px;background:radial-gradient(circle,rgba(200,168,75,.08) 0%,transparent 65%);pointer-events:none;}
-  .home-greeting{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(200,168,75,.6);text-transform:uppercase;margin-bottom:4px;}
-  .home-name{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#f0f2f8;margin-bottom:2px;}
-  .home-date{font-size:11px;color:rgba(240,242,248,.3);letter-spacing:1.5px;margin-bottom:20px;}
+  .home-greeting{font-family:'Cinzel',serif;font-size:15px;letter-spacing:4px;color:rgba(200,168,75,.6);text-transform:uppercase;margin-bottom:4px;}
+  .home-name{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#f0f2f8;margin-bottom:2px;}
+  .home-date{font-size:15px;color:rgba(240,242,248,.3);letter-spacing:1.5px;margin-bottom:20px;}
 
   /* 總資產大卡 */
-  .asset-card{background:linear-gradient(135deg,rgba(200,168,75,.12) 0%,rgba(200,168,75,.04) 100%);border:1px solid rgba(200,168,75,.22);border-radius:20px;padding:20px;position:relative;overflow:hidden;}
-  .asset-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#9a7030,#deba60,#9a7030);}
-  .asset-lbl{font-family:'Cinzel',serif;font-size:8px;letter-spacing:3px;color:rgba(200,168,75,.6);text-transform:uppercase;margin-bottom:6px;}
-  .asset-val{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:#f0f2f8;letter-spacing:-1px;margin-bottom:4px;}
-  .asset-chg{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--green);font-weight:700;}
-  .asset-breakdown{display:flex;gap:0;margin-top:16px;padding-top:14px;border-top:1px solid rgba(200,168,75,.12);}
+  .asset-card{background:linear-gradient(135deg,#faf6ee 0%,#f2ebe0 100%);border:1px solid rgba(160,120,60,.2);border-radius:20px;padding:20px;position:relative;overflow:hidden;}
+  .asset-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#9a6e20,#c8a84b,#9a6e20);}
+  .asset-lbl{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:#9a7030;text-transform:uppercase;margin-bottom:6px;font-weight:600;}
+  .asset-val{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:#2c1e0f;letter-spacing:-1px;margin-bottom:4px;}
+  .asset-chg{font-family:'JetBrains Mono',monospace;font-size:14px;color:#2a7a50;font-weight:700;}
+  .asset-breakdown{display:flex;gap:0;margin-top:16px;padding-top:14px;border-top:1px solid rgba(160,120,60,.15);}
   .ab-item{flex:1;padding:0 10px;}
   .ab-item:first-child{padding-left:0;}
-  .ab-item+.ab-item{border-left:1px solid rgba(200,168,75,.12);}
-  .ab-lbl{font-family:'Cinzel',serif;font-size:7px;letter-spacing:1.5px;color:rgba(200,168,75,.5);text-transform:uppercase;margin-bottom:4px;}
-  .ab-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;}
+  .ab-item+.ab-item{border-left:1px solid rgba(160,120,60,.15);}
+  .ab-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#9a7030;text-transform:uppercase;margin-bottom:4px;font-weight:600;}
+  .ab-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#2c1e0f;}
 
   /* 健康分小卡 */
-  .health-mini{display:flex;align-items:center;gap:14px;background:rgba(58,170,120,.08);border:1px solid rgba(58,170,120,.2);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .2s;}
+  .health-mini{display:flex;align-items:center;gap:14px;background:rgba(42,138,90,.1);border:1px solid rgba(42,138,90,.3);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .2s;}
   .health-mini:hover{background:rgba(58,170,120,.12);}
   .hm-ring{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;flex-shrink:0;}
   .hm-info{flex:1;}
-  .hm-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:3px;}
-  .hm-desc{font-size:12px;color:rgba(240,242,248,.5);}
-  .hm-arr{color:rgba(240,242,248,.2);font-size:16px;}
+  .hm-title{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:3px;}
+  .hm-desc{font-size:14px;color:#4a3520;line-height:1.5;}
+  .hm-arr{color:#9a7030;font-size:18px;font-weight:700;}
 
   /* 凱特今日建議卡 */
-  .kate-suggest{background:linear-gradient(135deg,rgba(72,120,192,.1) 0%,rgba(72,120,192,.04) 100%);border:1px solid rgba(72,120,192,.22);border-radius:16px;padding:16px;cursor:pointer;transition:all .2s;}
-  .kate-suggest:hover{border-color:rgba(72,120,192,.38);}
+  .kate-suggest{background:linear-gradient(135deg,#2a1e10 0%,#1e1608 100%);border:1px solid rgba(200,160,60,.25);border-radius:16px;padding:16px;cursor:pointer;transition:all .2s;}
+  .kate-suggest:hover{border-color:rgba(200,160,60,.45);}
   .ks-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-  .ks-badge{font-family:'Cinzel',serif;font-size:7px;letter-spacing:2px;color:var(--blue);background:rgba(72,120,192,.15);border:1px solid rgba(72,120,192,.25);border-radius:3px;padding:2px 8px;text-transform:uppercase;}
-  .ks-title{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:500;color:#f0f2f8;line-height:1.5;margin-bottom:8px;}
-  .ks-preview{font-size:12px;color:rgba(240,242,248,.45);line-height:1.6;}
+  .ks-badge{font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:#c8a84b;background:rgba(200,168,75,.15);border:1px solid rgba(200,168,75,.3);border-radius:3px;padding:2px 8px;text-transform:uppercase;}
+  .ks-title{font-family:'Noto Serif TC',serif;font-size:16px;font-weight:600;color:#f5ead8;line-height:1.6;margin-bottom:8px;}
+  .ks-preview{font-size:14px;color:rgba(245,234,216,.65);line-height:1.8;}
   .ks-action{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
-  .ks-more{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--blue);}
+  .ks-more{font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:#c8a84b;}
 
   /* 新聞精選 */
   .news-card{display:flex;gap:12px;margin:0 16px 10px;padding:14px;background:var(--card);border-radius:14px;border:1px solid var(--bl);cursor:pointer;transition:all .2s;}
   .news-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);}
   .nc-emoji{font-size:26px;flex-shrink:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;}
-  .nc-tag{font-family:'Cinzel',serif;font-size:7px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:4px;}
-  .nc-title{font-size:13px;color:var(--td);font-weight:500;line-height:1.5;margin-bottom:4px;}
-  .nc-meta{font-size:11px;color:var(--md);}
+  .nc-tag{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:4px;}
+  .nc-title{font-size:15px;color:var(--td);font-weight:500;line-height:1.855;margin-bottom:4px;}
+  .nc-meta{font-size:15px;color:var(--md);}
 
   /* 指數 */
   .idx{display:flex;margin:0 16px 0;background:var(--card);border:1px solid var(--bl);border-radius:14px;overflow:hidden;}
   .ii{flex:1;padding:11px 8px;}
   .ii+.ii{border-left:1px solid var(--bl);}
-  .ii-n{font-family:'Cinzel',serif;font-size:7px;letter-spacing:1px;color:var(--md);text-transform:uppercase;margin-bottom:4px;}
-  .ii-v{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--td);}
-  .ii-c{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;margin-top:2px;}
+  .ii-n{font-family:'Cinzel',serif;font-size:15px;letter-spacing:1px;color:var(--md);text-transform:uppercase;margin-bottom:4px;}
+  .ii-v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--td);}
+  .ii-c{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;margin-top:2px;}
   .up{color:var(--green);}
   .dn{color:var(--red);}
 
@@ -299,127 +311,127 @@ const S=`
   /* 持有摘要 */
   .hld-summary{margin:0 16px 14px;background:var(--card);border:1px solid var(--bl);border-radius:18px;padding:18px;position:relative;overflow:hidden;}
   .hld-summary::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#9a7030,#deba60,#9a7030);}
-  .hld-total-lbl{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:6px;}
-  .hld-total-val{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--td);margin-bottom:3px;}
+  .hld-total-lbl{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:6px;}
+  .hld-total-val{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:#2c1e0f;margin-bottom:3px;}
   .hld-row{display:flex;gap:0;margin-top:12px;padding-top:12px;border-top:1px solid var(--bl);}
   .hld-st{flex:1;padding:0 10px;}
   .hld-st:first-child{padding-left:0;}
   .hld-st+.hld-st{border-left:1px solid var(--bl);}
-  .hld-sl{font-family:'Cinzel',serif;font-size:7px;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:4px;}
-  .hld-sv{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;}
+  .hld-sl{font-family:'Cinzel',serif;font-size:15px;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:4px;}
+  .hld-sv{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;}
   /* 持有列表 */
   .hld-list{margin:0 16px;}
   .hld-item{background:var(--card);border:1px solid var(--bl);border-radius:14px;padding:16px;margin-bottom:10px;}
   .hld-item-name{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:500;color:var(--td);}
-  .hld-item-type{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--md);margin-top:3px;text-transform:uppercase;}
+  .hld-item-type{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--md);margin-top:3px;text-transform:uppercase;}
   .hld-item-bar{height:3px;background:var(--card3);border-radius:3px;margin-top:10px;}
   .hld-item-fill{height:3px;border-radius:3px;}
-  .hld-actions{display:flex;gap:6px;margin-top:10px;}
-  .hld-edit-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--bl);background:transparent;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--md);cursor:pointer;transition:all .2s;}
+  .hld-actions{display:flex;gap:6px;margin-top:12px;}
+  .hld-edit-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--bl);background:transparent;font-family:'Cinzel',serif;font-size:15px;letter-spacing:1px;color:var(--md);cursor:pointer;transition:all .2s;}
   .hld-edit-btn:hover{border-color:var(--gold);color:var(--gold);}
-  .hld-del-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(216,88,104,.2);background:transparent;font-family:'Cinzel',serif;font-size:9px;color:var(--rose);cursor:pointer;}
+  .hld-del-btn{padding:7px 12px;border-radius:8px;border:1px solid rgba(216,88,104,.2);background:transparent;font-family:'Cinzel',serif;font-size:15px;color:var(--rose);cursor:pointer;}
   /* 持有分類tab */
-  .htab-row{display:flex;margin:0 16px 14px;background:var(--card);border:1px solid var(--bl);border-radius:12px;overflow:hidden;}
-  .htab{flex:1;padding:11px 4px;text-align:center;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .2s;color:var(--md);border-bottom:2px solid transparent;}
-  .htab.active{background:var(--gold-dim);color:var(--gold);border-bottom-color:var(--gold);}
+  .htab-row{display:flex;margin:0 16px 14px;background:var(--card2);border:1px solid var(--bl);border-radius:12px;overflow:hidden;}
+  .htab{flex:1;padding:11px 4px;text-align:center;font-family:'Cinzel',serif;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .2s;color:var(--md);border-bottom:2px solid transparent;}
+  .htab.active{background:rgba(154,110,32,.12);color:#8a5e18;border-bottom-color:#8a5e18;}
 
   /* 健檢 */
   .hd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 4px;}
   .hd-sc{grid-column:1/-1;background:var(--card);border:1px solid var(--bl);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;}
   .s-ring{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .s-num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--td);}
-  .hd-gr{font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:var(--td);margin-bottom:4px;}
-  .hd-ds{font-size:11px;color:var(--md);line-height:1.5;}
+  .hd-gr{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--td);margin-bottom:4px;}
+  .hd-ds{font-size:15px;color:var(--md);line-height:1.855;}
   .hm{background:var(--card);border:1px solid var(--bl);border-radius:12px;padding:14px;position:relative;overflow:hidden;}
-  .hm-lb{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:6px;}
+  .hm-lb{font-family:'Cinzel',serif;font-size:14px;letter-spacing:1.5px;color:var(--md);text-transform:uppercase;margin-bottom:6px;}
   .hm-v{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;margin-bottom:3px;}
-  .hm-s{font-size:10px;color:var(--md);margin-bottom:8px;}
+  .hm-s{font-size:14px;color:var(--md);margin-bottom:8px;}
   .hm-bg{height:3px;background:var(--card3);border-radius:3px;}
   .hm-b{height:3px;border-radius:3px;}
   .hm-w{grid-column:1/-1;background:var(--card);border:1px solid var(--bl);border-radius:12px;padding:14px;display:flex;gap:0;}
   .hw-i{flex:1;padding:0 10px;}
   .hw-i:first-child{padding-left:0;}
   .hw-i+.hw-i{border-left:1px solid var(--bl);}
-  .hw-lb{font-family:'Cinzel',serif;font-size:7px;letter-spacing:1px;color:var(--md);text-transform:uppercase;margin-bottom:5px;}
-  .hw-v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--td);margin-bottom:5px;}
+  .hw-lb{font-family:'Cinzel',serif;font-size:15px;letter-spacing:1px;color:var(--md);text-transform:uppercase;margin-bottom:5px;}
+  .hw-v{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--td);margin-bottom:5px;}
   .hw-bg{height:3px;background:var(--card3);border-radius:3px;}
   .hw-b{height:3px;border-radius:3px;}
-  .health-update-btn{margin:14px 16px 0;width:calc(100% - 32px);padding:14px;border:1px solid rgba(58,170,120,.25);border-radius:12px;background:var(--green-dim);font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:var(--green);cursor:pointer;display:block;}
+  .health-update-btn{margin:14px 16px 0;width:calc(100% - 32px);padding:14px;border:1px solid rgba(58,170,120,.25);border-radius:12px;background:var(--green-dim);font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--green);cursor:pointer;display:block;}
 
   /* 試算 */
   .calc-section{padding:0 16px 32px;}
   .calc-card{background:var(--card);border:1px solid var(--bl);border-radius:16px;padding:20px;margin-bottom:14px;}
-  .calc-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;}
-  .calc-desc{font-size:12px;color:var(--md);margin-bottom:16px;line-height:1.7;}
-  .calc-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:12px;}
+  .calc-title{font-family:'Cinzel',serif;font-size:14px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;}
+  .calc-desc{font-size:14px;color:var(--md);margin-bottom:16px;line-height:1.85;}
+  .calc-lbl{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:12px;}
   .calc-lbl:first-of-type{margin-top:0;}
-  .calc-inp{width:100%;background:var(--card2);border:1px solid var(--bl);border-radius:11px;padding:12px 16px;color:var(--td);font-size:14px;font-family:'Noto Sans TC',sans-serif;outline:none;transition:border-color .2s;}
+  .calc-inp{width:100%;background:#fff;border:1px solid rgba(140,110,80,.2);border-radius:11px;padding:13px 16px;color:#2c1e0f;font-size:15px;font-family:'Noto Sans TC',sans-serif;outline:none;transition:border-color .2s;}
   .calc-inp:focus{border-color:var(--gold);}
-  .calc-btn{width:100%;margin-top:16px;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:12px;font-weight:600;letter-spacing:4px;cursor:pointer;}
+  .calc-btn{width:100%;margin-top:16px;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:14px;font-weight:600;letter-spacing:4px;cursor:pointer;}
   .calc-result{background:var(--card);border-radius:16px;padding:20px;margin-top:14px;}
-  .calc-res-hd{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;}
+  .calc-res-hd{font-family:'Cinzel',serif;font-size:15px;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;}
   .calc-res-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bl);}
   .calc-res-row:last-child{border-bottom:none;}
-  .calc-res-lbl{font-size:12px;color:var(--md);}
-  .calc-res-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--td);}
-  .calc-note{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:12px;line-height:1.7;}
+  .calc-res-lbl{font-size:14px;color:#6b5040;}
+  .calc-res-val{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#2c1e0f;}
+  .calc-note{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.85;}
 
   /* ── EXPLORE TAB (市場) ── */
   .news-feat{margin:0 16px 12px;position:relative;border-radius:18px;overflow:hidden;cursor:pointer;}
   .news-feat-img{width:100%;height:180px;display:flex;align-items:center;justify-content:center;font-size:72px;}
-  .news-feat-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,9,14,.95) 0%,rgba(8,9,14,.2) 60%,transparent 100%);padding:20px;display:flex;flex-direction:column;justify-content:flex-end;}
-  .nf-tag{display:inline-block;font-family:'Cinzel',serif;font-size:8px;padding:3px 10px;border-radius:3px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(200,168,75,.22);}
+  .news-feat-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(28,15,8,.95) 0%,rgba(28,15,8,.2) 60%,transparent 100%);padding:20px;display:flex;flex-direction:column;justify-content:flex-end;}
+  .nf-tag{display:inline-block;font-family:'Cinzel',serif;font-size:14px;padding:3px 10px;border-radius:3px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(200,168,75,.22);}
   .nf-tt{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;line-height:1.45;color:#f4f2ee;}
-  .nf-mt{font-size:11px;color:rgba(240,242,248,.38);display:flex;gap:10px;margin-top:6px;}
+  .nf-mt{font-size:15px;color:rgba(240,242,248,.38);display:flex;gap:10px;margin-top:6px;}
   .news-list-item{display:flex;gap:12px;margin:0 16px 10px;padding:14px;background:var(--card);border-radius:14px;border:1px solid var(--bl);cursor:pointer;}
-  .nli-emoji{font-size:22px;width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-  .nli-tag{font-family:'Cinzel',serif;font-size:7px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:3px;}
-  .nli-title{font-size:13px;color:var(--td);font-weight:500;line-height:1.45;}
-  .nli-meta{font-size:11px;color:var(--md);margin-top:3px;}
+  .nli-emoji{font-size:24px;width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .nli-tag{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:3px;}
+  .nli-title{font-size:15px;color:var(--td);font-weight:600;line-height:1.55;}
+  .nli-meta{font-size:15px;color:var(--md);margin-top:3px;}
   .si{display:flex;align-items:center;gap:12px;margin:0 16px 10px;padding:14px;background:var(--card);border:1px solid var(--bl);border-radius:14px;cursor:pointer;}
-  .si-ic{font-size:22px;width:38px;height:38px;background:var(--card2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .si-nm{font-size:14px;color:var(--td);font-weight:500;}
-  .si-cd{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--md);margin-top:2px;}
+  .si-ic{font-size:24px;width:38px;height:38px;background:var(--card2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .si-nm{font-size:16px;color:var(--td);font-weight:600;}
+  .si-cd{font-family:'Cinzel',serif;font-size:15px;letter-spacing:1px;color:var(--md);margin-top:2px;}
   .si-r{margin-left:auto;text-align:right;}
-  .si-p{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--td);}
-  .si-c{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:2px;}
+  .si-p{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#2c1e0f;}
+  .si-c{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;margin-top:2px;}
   /* 股票詳情 */
-  .sd-hd{padding:52px 20px 20px;background:linear-gradient(165deg,#0c1420 0%,#08090e 100%);}
+  .sd-hd{padding:52px 20px 20px;background:linear-gradient(165deg,#0c1420 0%,#1c0f08 100%);}
   .sd-name{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#f0f2f8;}
-  .sd-code{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--md);margin-top:3px;}
+  .sd-code{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);margin-top:3px;}
   .sd-price{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:#f0f2f8;margin-top:12px;}
   .sd-chg{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;margin-top:4px;}
   .chart-wrap{margin:0 16px;background:var(--card);border:1px solid var(--bl);border-radius:16px;padding:14px;}
   .chart-tabs{display:flex;gap:0;margin-bottom:12px;}
-  .ct{flex:1;padding:6px;text-align:center;border:none;background:transparent;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--md);cursor:pointer;border-radius:8px;transition:all .2s;}
+  .ct{flex:1;padding:6px;text-align:center;border:none;background:transparent;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);cursor:pointer;border-radius:8px;transition:all .2s;}
   .ct.active{background:var(--gold-dim);color:var(--gold);}
   .sd-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 16px 24px;}
   .sd-stat{background:var(--card);border:1px solid var(--bl);border-radius:12px;padding:12px;}
-  .sd-stat-l{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;color:var(--md);text-transform:uppercase;margin-bottom:5px;}
-  .sd-stat-v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--td);}
+  .sd-stat-l{font-family:'Cinzel',serif;font-size:14px;letter-spacing:1px;color:var(--md);text-transform:uppercase;margin-bottom:5px;}
+  .sd-stat-v{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--td);}
 
   /* ── ADVISOR TAB ── */
   /* 推薦hero */
-  .kt-hero{margin:0 16px 14px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;min-height:200px;background:linear-gradient(135deg,#0a1828 0%,#1a0a28 50%,#0a1018 100%);}
+  .kt-hero{margin:0 16px 14px;border-radius:20px;overflow:hidden;position:relative;cursor:pointer;min-height:200px;background:linear-gradient(135deg,#1e1005 0%,#2a1208 50%,#1a0e06 100%);}
   .kt-glow{position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(200,168,75,.15) 0%,transparent 70%);pointer-events:none;}
-  .kt-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,9,14,.85) 0%,transparent 60%);}
+  .kt-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(28,15,8,.85) 0%,transparent 60%);}
   .kt-con{position:absolute;bottom:0;left:0;right:0;padding:20px;}
-  .kt-badge{display:inline-flex;align-items:center;gap:5px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold);background:var(--gold-dim);border:1px solid rgba(200,168,75,.25);border-radius:3px;padding:3px 10px;text-transform:uppercase;margin-bottom:10px;}
+  .kt-badge{display:inline-flex;align-items:center;gap:5px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--gold);background:var(--gold-dim);border:1px solid rgba(200,168,75,.25);border-radius:3px;padding:3px 10px;text-transform:uppercase;margin-bottom:10px;}
   .kt-t{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#f0f2f8;line-height:1.4;margin-bottom:6px;}
-  .kt-b{font-size:12px;color:rgba(240,242,248,.45);line-height:1.6;}
+  .kt-b{font-size:14px;color:rgba(240,242,248,.45);line-height:1.8;}
   .kt-ac{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
-  .kt-more{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--gold);}
+  .kt-more{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--gold);}
   /* 產品推薦卡 */
   .prod-rec{margin:0 16px 10px;background:var(--card);border:1px solid var(--bl);border-radius:14px;padding:16px;}
   .prod-rec-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-  .prod-rank{font-family:'Cinzel',serif;font-size:7px;letter-spacing:2px;padding:3px 10px;border-radius:3px;text-transform:uppercase;}
+  .prod-rank{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;padding:3px 10px;border-radius:3px;text-transform:uppercase;}
   .r1{background:rgba(200,168,75,.15);color:#a07830;border:1px solid rgba(200,168,75,.25);}
   .r2{background:var(--silver-dim);color:var(--silver);border:1px solid rgba(148,168,192,.2);}
   .r3{background:var(--card2);color:var(--md);border:1px solid var(--bl);}
-  .prod-name{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:500;color:var(--td);flex:1;}
-  .prod-meta-t{font-size:11px;color:var(--md);}
-  .prod-body-t{font-size:12px;color:var(--md);line-height:1.6;}
-  .prod-action{display:inline-block;margin-top:8px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--gold);cursor:pointer;}
+  .prod-name{font-family:'Noto Serif TC',serif;font-size:16px;font-weight:600;color:var(--td);flex:1;}
+  .prod-meta-t{font-size:15px;color:var(--md);}
+  .prod-body-t{font-size:14px;color:var(--md);line-height:1.8;}
+  .prod-action{display:inline-block;margin-top:8px;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--gold);cursor:pointer;}
   /* 知識庫 */
   .term-card{margin:0 16px 10px;background:var(--card);border:1px solid var(--bl);border-radius:14px;overflow:hidden;cursor:pointer;}
   .term-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
@@ -430,57 +442,57 @@ const S=`
   .ti-silver{background:var(--silver-dim);}
   .ti-rose{background:var(--rose-dim);}
   .ti-green{background:var(--green-dim);}
-  .term-word{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:500;color:var(--td);}
-  .term-en{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--md);margin-top:2px;}
+  .term-word{font-family:'Noto Serif TC',serif;font-size:17px;font-weight:600;color:var(--td);}
+  .term-en{font-family:'Cinzel',serif;font-size:15px;letter-spacing:1px;color:var(--md);margin-top:2px;}
   .term-arr{color:var(--md);font-size:16px;transition:transform .2s;}
   .term-arr.open{transform:rotate(180deg);}
   .term-body{padding:0 16px 16px;border-top:1px solid var(--bl);}
-  .term-slbl{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin:12px 0 6px;}
-  .term-simple{font-family:'Noto Serif TC',serif;font-size:13px;color:var(--td);line-height:1.7;}
-  .term-detail{font-size:12px;color:var(--md);line-height:1.7;margin-top:8px;}
+  .term-slbl{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin:12px 0 6px;}
+  .term-simple{font-family:'Noto Serif TC',serif;font-size:15px;color:var(--td);line-height:1.85;}
+  .term-detail{font-size:14px;color:var(--md);line-height:1.85;margin-top:8px;}
   .term-ex{background:var(--card2);border-radius:10px;padding:12px;margin-top:10px;}
-  .term-exl{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:5px;}
-  .term-ext{font-size:12px;color:var(--tm);line-height:1.6;}
+  .term-exl{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:5px;}
+  .term-ext{font-size:14px;color:var(--tm);line-height:1.8;}
 
   /* 後台 */
   .kate-admin{margin:0 16px 14px;background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.2);border-radius:14px;padding:16px;}
-  .admin-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;}
+  .admin-title{font-family:'Cinzel',serif;font-size:15px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;}
   .theme-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
-  .theme-chip{padding:8px 14px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:12px;color:var(--md);cursor:pointer;transition:all .2s;}
+  .theme-chip{padding:8px 14px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:14px;color:var(--md);cursor:pointer;transition:all .2s;}
   .theme-chip.selected{background:var(--gold-dim);border-color:rgba(200,168,75,.4);color:#a07830;}
-  .gen-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:11px;font-weight:600;letter-spacing:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .gen-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:15px;font-weight:600;letter-spacing:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
   .gen-btn:disabled{opacity:.4;cursor:not-allowed;}
   .draft-card{margin:0 16px 12px;background:var(--card);border:1px solid var(--bl);border-radius:14px;padding:16px;}
-  .draft-badge{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--rose);text-transform:uppercase;margin-bottom:10px;}
+  .draft-badge{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--rose);text-transform:uppercase;margin-bottom:10px;}
   .draft-title-inp{width:100%;background:transparent;border:none;outline:none;font-family:'Playfair Display',serif;font-size:16px;color:var(--td);font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--bl);padding-bottom:8px;}
-  .draft-edit{width:100%;background:var(--card2);border:1px solid var(--bl);border-radius:10px;padding:12px;color:var(--td);font-size:13px;font-family:'Noto Serif TC',serif;outline:none;min-height:100px;resize:vertical;line-height:1.7;}
-  .pub-btn{width:calc(100% - 32px);margin:0 16px 8px;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#2a6a50,#3aaa78);color:#fff;font-family:'Cinzel',serif;font-size:11px;font-weight:600;letter-spacing:3px;cursor:pointer;}
-  .reset-btn{width:calc(100% - 32px);margin:0 16px 24px;padding:12px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;}
+  .draft-edit{width:100%;background:var(--card2);border:1px solid var(--bl);border-radius:10px;padding:12px;color:var(--td);font-size:15px;font-family:'Noto Serif TC',serif;outline:none;min-height:100px;resize:vertical;line-height:1.85;}
+  .pub-btn{width:calc(100% - 32px);margin:0 16px 8px;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#2a6a50,#3aaa78);color:#fff;font-family:'Cinzel',serif;font-size:15px;font-weight:600;letter-spacing:3px;cursor:pointer;}
+  .reset-btn{width:calc(100% - 32px);margin:0 16px 24px;padding:12px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;}
   .loading-wrap{padding:24px;text-align:center;}
   .spin{width:32px;height:32px;border:2px solid rgba(200,168,75,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .loading-step{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);}
+  .loading-step{font-family:'Cinzel',serif;font-size:14px;letter-spacing:3px;color:var(--gold);}
   /* picks news */
   .picks-news-card{margin:0 16px 8px;background:var(--card);border-radius:12px;padding:14px;border-left:3px solid var(--gold);}
-  .pnc-tag{font-family:'Cinzel',serif;font-size:7px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;}
-  .pnc-title{font-size:13px;color:var(--td);font-weight:500;margin-bottom:3px;}
-  .pnc-desc{font-size:11px;color:var(--md);}
+  .pnc-tag{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;}
+  .pnc-title{font-size:15px;color:var(--td);font-weight:500;margin-bottom:3px;}
+  .pnc-desc{font-size:15px;color:var(--md);}
 
   /* AI 問答 */
   .qa-wrap{padding:0 16px 24px;}
   .qa-hero{background:var(--card);border:1px solid var(--bl);border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;}
-  .qa-hero-t{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--td);margin-bottom:4px;}
-  .qa-hero-s{font-size:12px;color:var(--md);}
+  .qa-hero-t{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--td);margin-bottom:6px;}
+  .qa-hero-s{font-size:14px;color:var(--md);}
   .qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-  .qa-chip{padding:8px 14px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:12px;color:var(--md);cursor:pointer;transition:all .2s;}
+  .qa-chip{padding:8px 14px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:14px;color:var(--md);cursor:pointer;transition:all .2s;}
   .qa-chip:hover{border-color:rgba(200,168,75,.3);color:var(--gold);}
   .qa-thread{max-height:360px;overflow-y:auto;margin-bottom:12px;}
-  .qa-b-user{background:var(--gold-dim);border:1px solid rgba(200,168,75,.2);border-radius:14px 14px 4px 14px;padding:12px 14px;font-size:13px;color:#a07830;margin-bottom:10px;text-align:right;}
+  .qa-b-user{background:rgba(154,110,32,.12);border:1px solid rgba(154,110,32,.25);border-radius:14px 14px 4px 14px;padding:12px 14px;font-size:15px;color:#7a4e10;margin-bottom:10px;text-align:right;}
   .qa-b-kate{background:var(--card2);border:1px solid var(--bl);border-radius:14px 14px 14px 4px;padding:14px;margin-bottom:10px;}
-  .qa-key{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;text-transform:uppercase;}
+  .qa-key{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--gold);margin-bottom:8px;text-transform:uppercase;}
   .qa-related{margin-top:12px;padding-top:10px;border-top:1px solid var(--bl);}
-  .qa-rl{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:8px;}
-  .qa-rc{display:inline-block;margin:4px 4px 0 0;padding:6px 12px;border-radius:16px;border:1px solid var(--bl);font-size:11px;color:var(--md);cursor:pointer;}
+  .qa-rl{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:8px;}
+  .qa-rc{display:inline-block;margin:4px 4px 0 0;padding:6px 12px;border-radius:16px;border:1px solid var(--bl);font-size:15px;color:var(--md);cursor:pointer;}
   .qa-thinking{display:flex;align-items:center;gap:12px;padding:12px;}
   .qa-dots{display:flex;gap:4px;}
   .qa-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:blink 1.2s ease infinite;}
@@ -494,61 +506,61 @@ const S=`
   .qa-send-btn:disabled{opacity:.35;cursor:not-allowed;}
 
   /* 線上顧問 Messenger */
-  .msg-overlay{position:fixed;inset:0;background:rgba(8,9,14,.7);backdrop-filter:blur(8px);z-index:300;display:flex;align-items:flex-end;}
-  .msg-sheet{background:var(--ink);border-radius:24px 24px 0 0;width:100%;max-width:430px;margin:0 auto;max-height:88vh;display:flex;flex-direction:column;border-top:1px solid rgba(240,242,245,.1);}
+  .msg-overlay{position:fixed;inset:0;background:rgba(18,8,2,.75);backdrop-filter:blur(8px);z-index:300;display:flex;align-items:flex-end;}
+  .msg-sheet{background:#1c0f08;border-radius:24px 24px 0 0;width:100%;max-width:430px;margin:0 auto;max-height:88vh;display:flex;flex-direction:column;border-top:1px solid rgba(200,160,60,.2);}
   .msg-handle{width:36px;height:4px;background:rgba(240,242,248,.15);border-radius:2px;margin:12px auto 0;}
-  .msg-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;border-bottom:1px solid rgba(240,242,245,.07);}
+  .msg-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;border-bottom:1px solid rgba(200,160,60,.12);}
   .msg-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#9a7030,#deba60);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-  .msg-hname{font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:var(--tl);}
-  .msg-hstatus{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--green);margin-top:2px;}
+  .msg-hname{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:#f5ead8;}
+  .msg-hstatus{display:flex;align-items:center;gap:5px;font-size:13px;color:#4aaa78;margin-top:2px;}
   .online-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
-  .msg-close{margin-left:auto;background:rgba(240,242,248,.08);border:none;border-radius:50%;width:28px;height:28px;color:var(--md);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+  .msg-close{margin-left:auto;background:rgba(255,248,235,.08);border:none;border-radius:50%;width:28px;height:28px;color:rgba(245,220,170,.6);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
   .msg-thread{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
-  .b-time{text-align:center;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(240,242,248,.2);margin:4px 0;}
+  .b-time{text-align:center;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:rgba(240,242,248,.2);margin:4px 0;}
   .b-kate-wrap{display:flex;gap:8px;align-items:flex-end;}
-  .b-kate-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#9a7030,#deba60);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
-  .b-kate{background:rgba(240,242,248,.06);border:1px solid rgba(240,242,248,.08);border-radius:14px 14px 14px 4px;padding:11px 14px;font-size:13px;color:rgba(240,242,248,.75);line-height:1.6;max-width:80%;}
-  .b-user{background:var(--gold-dim);border:1px solid rgba(200,168,75,.2);border-radius:14px 14px 4px 14px;padding:11px 14px;font-size:13px;color:#a07830;max-width:80%;align-self:flex-end;}
-  .prod-menu{background:rgba(240,242,248,.04);border:1px solid rgba(240,242,248,.08);border-radius:14px;overflow:hidden;}
-  .prod-menu-lbl{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--md);text-transform:uppercase;padding:10px 14px 8px;}
-  .prod-menu-item{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-top:1px solid rgba(240,242,248,.05);cursor:pointer;transition:background .15s;}
+  .b-kate-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#9a7030,#deba60);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .b-kate{background:rgba(255,248,235,.08);border:1px solid rgba(200,160,60,.2);border-radius:14px 14px 14px 4px;padding:12px 15px;font-size:15px;color:#f0e0c0;line-height:1.8;max-width:80%;}
+  .b-user{background:rgba(200,160,60,.22);border:1px solid rgba(200,160,60,.35);border-radius:14px 14px 4px 14px;padding:12px 15px;font-size:15px;color:#f5dea0;max-width:80%;align-self:flex-end;}
+  .prod-menu{background:rgba(255,248,235,.05);border:1px solid rgba(200,160,60,.18);border-radius:14px;overflow:hidden;}
+  .prod-menu-lbl{font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--md);text-transform:uppercase;padding:10px 14px 8px;}
+  .prod-menu-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid rgba(200,160,60,.1);cursor:pointer;transition:background .15s;}
   .prod-menu-item:hover{background:rgba(240,242,248,.04);}
-  .prod-menu-name{font-size:13px;color:rgba(240,242,248,.7);}
-  .prod-menu-region{font-size:10px;color:var(--md);margin-top:2px;}
+  .prod-menu-name{font-size:15px;color:#f0e0c0;}
+  .prod-menu-region{font-size:14px;color:var(--md);margin-top:2px;}
   .thinking-wrap{display:flex;align-items:center;gap:8px;padding:4px 0;}
-  .thinking-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#9a7030,#deba60);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+  .thinking-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#9a7030,#deba60);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
   .dots-wrap{display:flex;gap:4px;padding:10px 14px;background:rgba(240,242,248,.06);border-radius:14px;}
   .dot-t{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:blink 1.2s ease infinite;}
   .dot-t:nth-child(2){animation-delay:.2s;}
   .dot-t:nth-child(3){animation-delay:.4s;}
-  .msg-quick-row{padding:10px 16px;border-top:1px solid rgba(240,242,245,.06);overflow-x:auto;display:flex;gap:8px;flex-shrink:0;}
+  .msg-quick-row{padding:10px 16px;border-top:1px solid rgba(200,160,60,.1);overflow-x:auto;display:flex;gap:8px;flex-shrink:0;}
   .msg-quick-row::-webkit-scrollbar{display:none;}
-  .msg-qc{flex-shrink:0;padding:8px 14px;border-radius:20px;border:1px solid rgba(240,242,245,.12);background:rgba(240,242,245,.04);font-size:12px;color:rgba(240,242,248,.5);cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;transition:all .2s;}
+  .msg-qc{flex-shrink:0;padding:8px 14px;border-radius:20px;border:1px solid rgba(200,160,60,.25);background:rgba(200,160,60,.08);font-size:14px;color:rgba(245,220,170,.7);cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;transition:all .2s;}
   .msg-qc:hover{border-color:rgba(200,168,75,.3);color:var(--gold);}
-  .msg-inp-row{display:flex;gap:10px;padding:12px 16px 28px;background:rgba(8,9,14,.97);border-top:1px solid rgba(240,242,245,.07);flex-shrink:0;}
-  .msg-inp{flex:1;background:var(--card2);border:1px solid var(--bl);border-radius:22px;padding:12px 18px;color:var(--td);font-size:14px;font-family:'Noto Sans TC',sans-serif;outline:none;}
+  .msg-inp-row{display:flex;gap:10px;padding:12px 16px 28px;background:rgba(24,12,4,.97);border-top:1px solid rgba(240,242,245,.07);flex-shrink:0;}
+  .msg-inp{flex:1;background:#fff;border:1px solid rgba(140,110,80,.2);border-radius:22px;padding:12px 18px;color:#2c1e0f;font-size:15px;font-family:'Noto Sans TC',sans-serif;outline:none;}
   .msg-inp:focus{border-color:var(--silver);}
   .msg-send{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,#9a7030,#deba60);color:#07090f;font-size:18px;cursor:pointer;flex-shrink:0;}
   .msg-send:disabled{opacity:.35;cursor:not-allowed;}
 
   /* 通知 */
-  .notif-item{display:flex;align-items:flex-start;gap:12px;margin:0 16px 10px;padding:14px;background:var(--card);border-radius:14px;border:1px solid var(--bl);cursor:pointer;transition:background .15s;}
+  .notif-item{display:flex;align-items:flex-start;gap:12px;margin:0 16px 10px;padding:16px;background:var(--card);border-radius:14px;border:1px solid var(--bl);cursor:pointer;transition:background .15s;}
   .notif-item.unread{background:rgba(200,168,75,.05);border-color:rgba(200,168,75,.15);}
   .n-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
   .ni-gold{background:var(--gold-dim);}
   .ni-blue{background:var(--blue-dim);}
   .ni-rose{background:var(--rose-dim);}
   .ni-green{background:var(--green-dim);}
-  .n-title{font-size:13px;color:var(--td);font-weight:500;margin-bottom:3px;}
-  .n-desc{font-size:12px;color:var(--md);line-height:1.5;}
-  .n-time{font-size:10px;color:var(--md);margin-top:4px;}
+  .n-title{font-size:15px;color:var(--td);font-weight:500;margin-bottom:3px;}
+  .n-desc{font-size:14px;color:var(--md);line-height:1.855;}
+  .n-time{font-size:14px;color:var(--md);margin-top:4px;}
   .n-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:4px;}
   .ns-group{margin:0 16px 16px;background:var(--card);border:1px solid var(--bl);border-radius:14px;overflow:hidden;}
-  .ns-hd{padding:12px 16px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--md);text-transform:uppercase;border-bottom:1px solid var(--bl);}
+  .ns-hd{padding:12px 16px;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);text-transform:uppercase;border-bottom:1px solid var(--bl);}
   .ns-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bl);cursor:pointer;}
   .ns-item:last-child{border-bottom:none;}
   .ns-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
-  .ns-name{flex:1;font-size:13px;color:var(--td);}
+  .ns-name{flex:1;font-size:15px;color:var(--td);}
   .toggle{width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;}
   .toggle.on{background:var(--green);}
   .toggle.off{background:rgba(240,242,245,.12);}
@@ -557,12 +569,12 @@ const S=`
   .toggle.off .toggle-dot{left:3px;}
 
   /* Profile */
-  .prof-header{padding:52px 20px 28px;background:linear-gradient(165deg,#0c1420 0%,#08090e 100%);text-align:center;}
+  .prof-header{padding:52px 20px 28px;background:linear-gradient(165deg,#0c1420 0%,#1c0f08 100%);text-align:center;}
   .prof-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#9a7030,#deba60);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;}
-  .prof-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#f0f2f8;margin-bottom:4px;}
-  .prof-role{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:rgba(200,168,75,.6);text-transform:uppercase;}
+  .prof-name{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#f0f2f8;margin-bottom:4px;}
+  .prof-role{font-family:'Cinzel',serif;font-size:15px;letter-spacing:3px;color:rgba(200,168,75,.6);text-transform:uppercase;}
   .set-group{margin:0 16px 12px;background:var(--card);border:1px solid var(--bl);border-radius:14px;overflow:hidden;}
-  .set-gl{padding:10px 16px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--md);text-transform:uppercase;border-bottom:1px solid var(--bl);}
+  .set-gl{padding:10px 16px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--md);text-transform:uppercase;border-bottom:1px solid var(--bl);}
   .set-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--bl);cursor:pointer;}
   .set-item:last-child{border-bottom:none;}
   .set-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
@@ -570,82 +582,83 @@ const S=`
   .ss{background:var(--blue-dim);}
   .sr{background:var(--rose-dim);}
   .set-nm{font-size:14px;color:var(--td);}
-  .set-ds{font-size:11px;color:var(--md);margin-top:2px;}
+  .set-ds{font-size:15px;color:var(--md);margin-top:2px;}
   .risk-row{display:flex;gap:8px;padding:12px 16px;}
-  .risk-chip{flex:1;padding:10px;border-radius:10px;border:1px solid var(--bl);background:transparent;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--md);cursor:pointer;text-align:center;transition:all .2s;}
+  .risk-chip{flex:1;padding:10px;border-radius:10px;border:1px solid var(--bl);background:transparent;font-family:'Cinzel',serif;font-size:14px;letter-spacing:1px;color:var(--md);cursor:pointer;text-align:center;transition:all .2s;}
   .risk-chip.active{background:var(--gold-dim);border-color:rgba(200,168,75,.4);color:#a07830;}
 
   /* 新聞詳情 */
   .nd-hero{min-height:240px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;padding:20px;overflow:hidden;}
-  .nd-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,9,14,.95),transparent 60%);}
+  .nd-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(28,15,8,.95),transparent 60%);}
   .nd-hcon{position:relative;z-index:1;}
-  .nd-tag{display:inline-block;font-family:'Cinzel',serif;font-size:8px;padding:3px 10px;border-radius:3px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(200,168,75,.22);}
+  .nd-tag{display:inline-block;font-family:'Cinzel',serif;font-size:14px;padding:3px 10px;border-radius:3px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(200,168,75,.22);}
   .nd-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#f4f2ee;line-height:1.4;}
-  .nd-meta{display:flex;gap:12px;font-size:11px;color:rgba(240,242,248,.4);margin-top:8px;}
+  .nd-meta{display:flex;gap:12px;font-size:15px;color:rgba(240,242,248,.4);margin-top:8px;}
   .nd-body{padding:20px 20px 32px;background:var(--card);}
   .nd-body p{font-family:'Noto Serif TC',serif;font-size:14px;color:var(--td);line-height:1.9;margin-bottom:16px;}
 
   /* 保單+股票+固收表單 */
-  .holding-form-overlay{position:fixed;inset:0;background:rgba(8,9,14,.88);backdrop-filter:blur(8px);z-index:350;display:flex;align-items:flex-end;}
+  .holding-form-overlay{position:fixed;inset:0;background:rgba(28,15,8,.88);backdrop-filter:blur(8px);z-index:350;display:flex;align-items:flex-end;}
   .holding-form-sheet{background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:430px;margin:0 auto;padding:24px 20px 40px;max-height:90vh;overflow-y:auto;}
-  .hf-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--td);margin-bottom:20px;}
-  .hf-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:14px;}
-  .hf-inp{width:100%;background:var(--card2);border:1px solid var(--bl);border-radius:11px;padding:13px 16px;color:var(--td);font-size:14px;font-family:'Noto Sans TC',sans-serif;outline:none;transition:border-color .2s;}
+  .hf-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--td);margin-bottom:20px;}
+  .hf-lbl{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:14px;}
+  .hf-inp{width:100%;background:#fff;border:1px solid rgba(140,110,80,.2);border-radius:11px;padding:14px 16px;color:#2c1e0f;font-size:15px;font-family:'Noto Sans TC',sans-serif;outline:none;transition:border-color .2s;}
   .hf-inp:focus{border-color:var(--gold);}
+  select.hf-inp{appearance:auto;-webkit-appearance:auto;-moz-appearance:auto;}
   .hf-row{display:flex;gap:8px;}
-  .hf-type-chip{padding:7px 14px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:12px;color:var(--md);cursor:pointer;transition:all .2s;}
+  .hf-type-chip{padding:7px 14px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:14px;color:var(--md);cursor:pointer;transition:all .2s;}
   .hf-type-chip.active{background:var(--gold-dim);border-color:rgba(200,168,75,.4);color:#a07830;}
-  .hf-save-btn{width:100%;margin-top:20px;padding:16px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:12px;font-weight:600;letter-spacing:4px;cursor:pointer;}
-  .hf-cancel-btn{width:100%;margin-top:8px;padding:13px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;}
+  .hf-save-btn{width:100%;margin-top:20px;padding:16px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:14px;font-weight:600;letter-spacing:4px;cursor:pointer;}
+  .hf-cancel-btn{width:100%;margin-top:8px;padding:13px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;}
 
   /* 健檢問卷 */
-  .health-form-overlay{position:fixed;inset:0;background:rgba(8,9,14,.9);backdrop-filter:blur(10px);z-index:350;overflow-y:auto;}
+  .health-form-overlay{position:fixed;inset:0;background:rgba(28,15,8,.9);backdrop-filter:blur(10px);z-index:350;overflow-y:auto;}
   .health-form-wrap{max-width:430px;margin:0 auto;padding:40px 20px 60px;}
   .hform-hdr{margin-bottom:28px;}
   .hform-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#f0f2f8;margin-bottom:6px;}
-  .hform-sub{font-size:12px;color:rgba(240,242,248,.38);letter-spacing:1px;}
+  .hform-sub{font-size:14px;color:rgba(240,242,248,.38);letter-spacing:1px;}
   .hform-section{background:var(--card);border:1px solid var(--bl);border-radius:16px;padding:18px;margin-bottom:14px;}
-  .hform-section-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;}
-  .hform-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:12px;}
+  .hform-section-title{font-family:'Cinzel',serif;font-size:14px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;}
+  .hform-lbl{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:12px;}
   .hform-lbl:first-of-type{margin-top:0;}
   .hform-inp{width:100%;background:var(--card2);border:1px solid var(--bl);border-radius:11px;padding:12px 16px;color:var(--td);font-size:14px;font-family:'Noto Sans TC',sans-serif;outline:none;}
   .hform-check-row{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
   .hform-check{display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;background:var(--card2);border-radius:10px;border:1px solid var(--bl);transition:all .2s;}
   .hform-check.checked{border-color:rgba(200,168,75,.3);background:var(--gold-dim);}
   .hform-check-box{width:20px;height:20px;border-radius:6px;border:1px solid var(--bl);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .hform-check.checked .hform-check-box{background:var(--gold);border-color:var(--gold);color:#07090f;font-size:12px;}
+  .hform-check.checked .hform-check-box{background:var(--gold);border-color:var(--gold);color:#07090f;font-size:14px;}
   .hform-check-lbl{font-size:14px;color:var(--td);}
-  .hform-submit{width:100%;padding:17px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:13px;font-weight:600;letter-spacing:4px;cursor:pointer;margin-top:8px;}
-  .hform-cancel{width:100%;padding:13px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;margin-top:8px;}
+  .hform-submit{width:100%;padding:17px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:15px;font-weight:600;letter-spacing:4px;cursor:pointer;margin-top:8px;}
+  .hform-cancel{width:100%;padding:13px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;margin-top:8px;}
 
   /* Onboarding */
-  .onb-overlay{position:fixed;inset:0;background:rgba(8,9,14,.95);backdrop-filter:blur(12px);z-index:350;overflow-y:auto;}
+  .onb-overlay{position:fixed;inset:0;background:rgba(28,15,8,.95);backdrop-filter:blur(12px);z-index:350;overflow-y:auto;}
   .onb-wrap{max-width:430px;margin:0 auto;padding:40px 20px 60px;min-height:100vh;}
   .onb-steps{display:flex;gap:6px;margin-bottom:24px;}
   .onb-step-dot{flex:1;height:3px;border-radius:3px;background:rgba(240,242,245,.1);}
   .onb-step-dot.done{background:var(--gold);}
   .onb-step-dot.active{background:rgba(200,168,75,.5);}
-  .onb-step-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
-  .onb-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#f0f2f8;margin-bottom:20px;}
+  .onb-step-title{font-family:'Cinzel',serif;font-size:14px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+  .onb-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#f0f2f8;margin-bottom:20px;}
   .onb-card{background:var(--card);border:1px solid var(--bl);border-radius:16px;padding:20px;margin-bottom:14px;}
-  .onb-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:14px;}
+  .onb-lbl{font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:var(--md);text-transform:uppercase;margin-bottom:7px;margin-top:14px;}
   .onb-lbl:first-of-type{margin-top:0;}
   .onb-inp{width:100%;background:var(--card2);border:1px solid var(--bl);border-radius:11px;padding:13px 16px;color:var(--td);font-size:14px;font-family:'Noto Sans TC',sans-serif;outline:none;}
   .onb-goal-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
-  .onb-goal-chip{padding:8px 16px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:13px;color:var(--md);cursor:pointer;}
+  .onb-goal-chip{padding:8px 16px;border-radius:20px;border:1px solid var(--bl);background:transparent;font-size:15px;color:var(--md);cursor:pointer;}
   .onb-goal-chip.sel{background:var(--gold-dim);border-color:rgba(200,168,75,.4);color:#a07830;}
   .onb-risk-row{display:flex;gap:8px;margin-top:4px;}
-  .onb-risk-chip{flex:1;padding:10px;border-radius:10px;border:1px solid var(--bl);background:transparent;font-family:'Cinzel',serif;font-size:10px;color:var(--md);cursor:pointer;text-align:center;}
+  .onb-risk-chip{flex:1;padding:10px;border-radius:10px;border:1px solid var(--bl);background:transparent;font-family:'Cinzel',serif;font-size:14px;color:var(--md);cursor:pointer;text-align:center;}
   .onb-risk-chip.sel{background:var(--gold-dim);border-color:rgba(200,168,75,.4);color:#a07830;}
-  .onb-next-btn{width:100%;padding:16px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:12px;font-weight:600;letter-spacing:4px;cursor:pointer;}
-  .onb-back-btn{width:100%;padding:13px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;margin-top:8px;}
+  .onb-next-btn{width:100%;padding:16px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:14px;font-weight:600;letter-spacing:4px;cursor:pointer;}
+  .onb-back-btn{width:100%;padding:13px;border:1px solid rgba(240,242,245,.1);border-radius:12px;background:transparent;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(240,242,248,.3);cursor:pointer;margin-top:8px;}
   .onb-success{text-align:center;padding:60px 20px;}
   .onb-success-icon{font-size:56px;margin-bottom:16px;}
-  .onb-success-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green);margin-bottom:10px;}
-  .onb-new-btn{width:calc(100% - 32px);margin:0 16px 16px;padding:14px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:11px;font-weight:600;letter-spacing:3px;cursor:pointer;}
+  .onb-success-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green);margin-bottom:10px;}
+  .onb-new-btn{width:calc(100% - 32px);margin:0 16px 16px;padding:14px;border:none;border-radius:13px;background:linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60);color:#07090f;font-family:'Cinzel',serif;font-size:15px;font-weight:600;letter-spacing:3px;cursor:pointer;}
   .onb-list-item{background:var(--card);border:1px solid var(--bl);border-radius:14px;padding:14px;margin:0 16px 10px;cursor:pointer;}
   .onb-list-name{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:500;color:var(--td);margin-bottom:4px;}
-  .onb-list-tag{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;padding:3px 10px;border-radius:20px;text-transform:uppercase;}
+  .onb-list-tag{font-family:'Cinzel',serif;font-size:14px;letter-spacing:1px;padding:3px 10px;border-radius:20px;text-transform:uppercase;}
   .onb-tag-done{background:var(--green-dim);color:var(--green);}
   .onb-tag-pend{background:var(--gold-dim);color:#a07830;}
 
@@ -719,12 +732,13 @@ export default function App(){
   const [showEditName,setShowEditName]=useState(false);
   const [editNameVal,setEditNameVal]=useState("");
   // Navigation
-  const [tab,setTab]=useState("home");      // home | assets | explore | advisor
-  const [assetsSub,setAssetsSub]=useState("holdings");  // holdings | health | calc
-  const [exploreSub,setExploreSub]=useState("news");    // news | stocks
-  const [advisorSub,setAdvisorSub]=useState("picks");   // picks | tools | qa
+  const [tab,setTab]=useState("home");      // home | assets | calc | advisor
+  const [assetsSub,setAssetsSub]=useState("holdings");  // holdings | coverage | health
+  const [advisorSub,setAdvisorSub]=useState("articles");   // articles | tools | kattools | qa
   const [liveNews,setLiveNews]=useState([]);
   const [newsLoading,setNewsLoading]=useState(false);
+  const [liveIndices,setLiveIndices]=useState(indices);
+  const [indicesLoading,setIndicesLoading]=useState(false);
   const [screen,setScreen]=useState(null);  // {type: news|stock|article, data}
   // UI
   const [chartTab,setChartTab]=useState("1M");
@@ -751,6 +765,7 @@ export default function App(){
   const [stockForm,setStockForm]=useState({code:"",name:"",shares:"",costPerShare:"",currentPrice:"",currency:"TWD"});
   const [stockCodeInput,setStockCodeInput]=useState("");
   const [stockLookupLoading,setStockLookupLoading]=useState(false);
+  const [stockRefreshing,setStockRefreshing]=useState(false);
   const [fixedHoldings,setFixedHoldings]=useState([
     {id:1,product:"萬兆豐 — 金益求兆",amountUSD:100000,startDate:"2024-01",lockYears:2,annualRate:6},
   ]);
@@ -759,8 +774,10 @@ export default function App(){
   const [fixedForm,setFixedForm]=useState({product:"萬兆豐 — 金益求金",amountUSD:"",startDate:"",lockYears:"1",annualRate:"6"});
   // 貴金屬
   const METAL_BLANK={product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""};
-  const RE_BLANK={product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""};
-  const [metalHoldings,setMetalHoldings]=useState([]);
+  const RE_BLANK={name:"",propertyType:"住宅",address:"",marketValue:"",govValue:"",mortgage:"",purchaseYear:"",purchasePrice:"",annualReturn:"",currency:"TWD",notes:""};
+  const [metalHoldings,setMetalHoldings]=useState([
+    {id:1,product:"萬兆豐貴金屬 — 實體黃金",grams:1000,costPerGram:95,currentPricePerGram:106,purchaseDate:"2024-01"},
+  ]);
   const [showMetalForm,setShowMetalForm]=useState(false);
   const [editMetalId,setEditMetalId]=useState(null);
   const [metalForm,setMetalForm]=useState({product:"萬兆豐貴金屬 — 實體黃金",grams:"",costPerGram:"",currentPricePerGram:"",purchaseDate:""});
@@ -768,17 +785,62 @@ export default function App(){
   const [realEstateHoldings,setRealEstateHoldings]=useState([]);
   const [showRealEstateForm,setShowRealEstateForm]=useState(false);
   const [editRealEstateId,setEditRealEstateId]=useState(null);
-  const [realEstateForm,setRealEstateForm]=useState({product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""});
+  const [realEstateForm,setRealEstateForm]=useState({name:"",propertyType:"住宅",address:"",marketValue:"",govValue:"",mortgage:"",purchaseYear:"",purchasePrice:"",annualReturn:"",currency:"TWD",notes:""});
   // Health
   const [showHealthForm,setShowHealthForm]=useState(false);
+  const [showCoverageForm,setShowCoverageForm]=useState(false);
+  const [coverageForm,setCoverageForm]=useState({
+    monthlyExpense:"",    // 家庭月支出
+    lifeInsurance:"",     // 壽險保額
+    realExpense:"",       // 實支實付上限/次
+    dailyHospital:"",     // 住院日額
+    cancerLump:"",        // 癌症一次金
+  });
+  const [coverageResult,setCoverageResult]=useState(null);
   const [healthForm,setHealthForm]=useState({monthlyIncome:"",monthlyExpense:"",emergencyFund:"",totalDebt:"",hasLife:false,hasHealth:false,hasCritical:false,retirementTarget:"",retirementCurrent:""});
   const [healthScore,setHealthScore]=useState(null);
   // Calculators
-  const [calcMode,setCalcMode]=useState("mortgage"); // mortgage | retire
-  const [mtgForm,setMtgForm]=useState({homeValue:"",loanBalance:"",rate:"2.5",years:"20",targetRate:"6"});
+  const [calcMode,setCalcMode]=useState("mortgage"); // mortgage | retire | compound | estate | gift | incometax | realestate2 | fx | rule72 | inflation | breakeven | irr
+  const [mtgForm,setMtgForm]=useState({homeValue:"",loanBalance:"",rate:"2.6",years:"20",targetRate:"6",originalMonthly:""});
   const [mtgResult,setMtgResult]=useState(null);
   const [retForm,setRetForm]=useState({currentAge:"",retireAge:"65",currentSavings:"",monthlyContrib:"",expectedReturn:"5",monthlyExpense:""});
   const [retResult,setRetResult]=useState(null);
+  // 複利計算機
+  const [compForm,setCompForm]=useState({principal:"",rate:"",years:"",monthly:""});
+  const [compResult,setCompResult]=useState(null);
+  // 遺產稅試算
+  const [estateForm,setEstateForm]=useState({totalAsset:"",spouse:true,children:"2",parents:"0",funeralExp:"1380000",debt:"",disabledCount:"0",lifeInsurance:""});
+  const [estateResult,setEstateResult]=useState(null);
+  // 贈與稅試算
+  const [giftForm,setGiftForm]=useState({totalGift:"",donors:"1",wedding:false,spouseGift:false});
+  const [giftResult,setGiftResult]=useState(null);
+  // 匯率換算
+  const [fxAmount,setFxAmount]=useState("");
+  const [fxFrom,setFxFrom]=useState("USD");
+  const [fxTo,setFxTo]=useState("TWD");
+  const [fxRates,setFxRates]=useState({USD:1,TWD:31.5,HKD:7.82,SGD:1.34,JPY:149.5,EUR:0.92,CNY:7.24});
+  const [fxLoading,setFxLoading]=useState(false);
+  const [fxUpdatedAt,setFxUpdatedAt]=useState("");
+  // 72法則
+  const [rule72Rate,setRule72Rate]=useState("");
+  // 通膨侵蝕
+  const [inflForm,setInflForm]=useState({amount:"",rate:"3",years:"20"});
+  // 綜所稅
+  const [itaxForm,setItaxForm]=useState({income:"",spouse:false,children:"0",parents:"0",salary:true,rent:false,youngKids:"",ltc:""});
+  // 房地合一稅
+  const [reit2Form,setReit2Form]=useState({sellPrice:"",buyPrice:"",cost:"",holdYears:"",isPersonal:true,selfUse:false});
+  // 回本年試算
+  const [breakevenForm,setBreakevenForm]=useState({premium:"",payYears:"2",targetRate:"6"});
+  const [breakevenResult,setBreakevenResult]=useState(null);
+  // IRR 試算
+  const [irrForm,setIrrForm]=useState({mode:"insurance",payYears:"2",annualPremium:"",rows:[{year:"",value:""}]});
+  const [irrResult,setIrrResult]=useState(null);
+  // 客戶摘要卡
+  const [summaryClientId,setSummaryClientId]=useState(null);
+  // 推薦信
+  const [letterType,setLetterType]=useState("referral");
+  const [letterResult,setLetterResult]=useState("");
+  const [letterLoading,setLetterLoading]=useState(false);
   // Advisor / Picks
   const [picksStep,setPicksStep]=useState("idle");
   const [selectedThemes,setSelectedThemes]=useState(["inheritance","geopolitical"]);
@@ -805,7 +867,7 @@ export default function App(){
   const [qaLoading,setQaLoading]=useState(false);
   // Notifs
   const [notifs,setNotifs]=useState(NOTIFS);
-  const [notifSettings,setNotifSettings]=useState({kate:true,stock:true,product:true,payment:true,fx:false});
+  const [notifSettings,setNotifSettings]=useState({kate:true,stock:true,product:true,payment:true,fx:false,tax:true});
   // Onboarding
   const ONBOARDING_STEPS=[{title:"基本資料",icon:"👤"},{title:"財務狀況",icon:"💰"},{title:"目標與偏好",icon:"🎯"},{title:"其他資訊",icon:"📋"}];
   const GOAL_OPTIONS=["傳承規劃","退休規劃","資產保全","海外配置","節稅規劃","積極增值","穩健儲蓄"];
@@ -821,22 +883,88 @@ export default function App(){
   const qaRef=useRef(null);
 
   useEffect(()=>{if(threadRef.current)threadRef.current.scrollTop=threadRef.current.scrollHeight;},[msgThread,msgLoading]);
+  useEffect(()=>{if(qaRef.current)qaRef.current.scrollTop=qaRef.current.scrollHeight;},[qaThread,qaLoading]);
+  useEffect(()=>{if(mtgResult&&mtgForm.homeValue)calcMortgage();},[mtgForm]);
+
+  // 稅務 & 保單通知自動產生
   useEffect(()=>{
     if(!loggedIn)return;
-    setNewsLoading(true);
-    searchNews("今日最新財經新聞台灣股市美股黃金保險傳承 5則重要新聞標題和摘要")
-      .then(raw=>generateAI(`根據以下新聞整理5則，純JSON（不加markdown）：{"news":[{"tag":"分類","emoji":"📊","title":"標題20字內","src":"來源","time":"幾小時前","body":"詳細說明100字內\n\n凱特觀點：簡短觀點"}]}\n新聞：${raw.slice(0,2000)}`,1500))
+    const today=new Date();
+    const year=today.getFullYear();
+    const autoNotifs=[];
+
+    // ── 稅務行事曆通知 ──
+    if(notifSettings.tax){
+      TAX_CALENDAR.forEach(t=>{
+        const end=new Date(year,t.endMonth-1,t.endDay);
+        const start=new Date(year,t.month-1,t.day);
+        const daysToEnd=Math.ceil((end-today)/(1000*60*60*24));
+        const daysToStart=Math.ceil((start-today)/(1000*60*60*24));
+        if((daysToStart<=t.warnDays&&daysToStart>=-1)||(today>=start&&today<=end)){
+          const isActive=today>=start&&today<=end;
+          const urgency=daysToEnd<=7?"urgent":daysToEnd<=14?"soon":"normal";
+          autoNotifs.push({
+            id:`tax_${t.key}_${year}`,
+            icon:t.icon,
+            cls:urgency==="urgent"?"ni-rose":urgency==="soon"?"ni-gold":"ni-green",
+            title:isActive?`📌 ${t.name}進行中`:`🗓️ ${t.name}即將到來`,
+            desc:isActive
+              ?`${t.desc}，截止日 ${year}/${t.endMonth}/${t.endDay}（剩 ${Math.max(0,daysToEnd)} 天）`
+              :`${t.desc}，開始日 ${year}/${t.month}/${t.day}（${daysToStart<=0?"今日開始":`${daysToStart} 天後`}）`,
+            time:"稅務提醒",unread:true,isTax:true,
+          });
+        }
+      });
+    }
+
+    // ── 保單繳費通知 ──
+    if(notifSettings.payment){
+      insuranceHoldings.forEach(h=>{
+        const startYr=Number(h.startYear)||year;
+        // 計算下一個繳費年度（每年同月1日，簡化為3月1日）
+        let nextPayYear=year;
+        const payDue=new Date(nextPayYear,2,1); // 3月1日
+        if(payDue<today) nextPayYear=year+1;
+        const nextDue=new Date(nextPayYear,2,1);
+        const daysLeft=Math.ceil((nextDue-today)/(1000*60*60*24));
+        if(daysLeft<=60){
+          const urgent=daysLeft<=14;
+          const prodName=h.product.split("—")[1]?.trim()||h.product;
+          autoNotifs.push({
+            id:`ins_${h.id}_${nextPayYear}`,
+            icon:"📅",
+            cls:urgent?"ni-rose":"ni-green",
+            title:`${urgent?"⚠️ 緊急｜":""}保單繳費提醒`,
+            desc:`${prodName}｜年繳 USD ${(h.annualPremiumUSD||0).toLocaleString()}，繳費日 ${nextPayYear}/03/01（剩 ${daysLeft} 天）`,
+            time:"保單提醒",unread:true,isPayment:true,
+          });
+        }
+      });
+    }
+
+    if(autoNotifs.length>0){
+      setNotifs(prev=>{
+        const manual=prev.filter(n=>!n.isTax&&!n.isPayment);
+        return[...autoNotifs,...manual];
+      });
+    }
+  },[loggedIn,notifSettings.tax,notifSettings.payment,insuranceHoldings]);
+
+  useEffect(()=>{
+    if(!loggedIn)return;
+    setIndicesLoading(true);
+    searchNews("台灣加權指數 S&P500 那斯達克 日經225 今日最新收盤點數 漲跌幅")
+      .then(raw=>generateAI(`根據以下市場資訊，整理4個指數的最新數據，輸出純JSON（不加markdown）：{"indices":[{"name":"台灣加權","val":"點數數字加逗號","chg":"+/-百分比%","up":true或false},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n資料：${raw.slice(0,2000)}`,600))
       .then(raw=>{
         try{
-          const cleaned=raw.replace(/\`\`\`json|\`\`\`/g,"").trim();
+          const cleaned=raw.replace(/```json|```/g,"").trim();
           const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-          if(data.news?.length>0)setLiveNews(data.news);
+          if(data.indices?.length>0)setLiveIndices(data.indices);
         }catch{}
-        setNewsLoading(false);
+        setIndicesLoading(false);
       })
-      .catch(()=>setNewsLoading(false));
+      .catch(()=>setIndicesLoading(false));
   },[loggedIn]);
-  useEffect(()=>{if(qaRef.current)qaRef.current.scrollTop=qaRef.current.scrollHeight;},[qaThread,qaLoading]);
 
   const handleRegister=async()=>{
     if(!acct.trim()||!pwd||loginLoading)return;
@@ -859,15 +987,41 @@ export default function App(){
     setShowEditName(false);showToast("✓ 顯示名稱已更新");
   };
 
+  const LOCAL_ACCOUNTS=[
+    {username:"Kate",password:"kate2026",is_kate:true,display_name:"凱特",risk_level:"穩健",id:"local-kate"},
+    {username:"kate",password:"kate2026",is_kate:true,display_name:"凱特",risk_level:"穩健",id:"local-kate"},
+    {username:"demo",password:"demo1234",is_kate:false,display_name:"示範用戶",risk_level:"穩健",id:"local-demo"},
+  ];
   const handleLogin=async()=>{
     if(!acct||!pwd||loginLoading)return;
     setLoginLoading(true);setLoginError("");
+    // 先嘗試本地帳號（避免網路限制）
+    const localUser=LOCAL_ACCOUNTS.find(u=>u.username===acct.trim()&&u.password===pwd);
+    if(localUser){
+      setCurrentUser(localUser);setIsKate(localUser.is_kate);setRisk(localUser.risk_level||"穩健");
+      // 注入預設示範持倉
+      setInsuranceHoldings([
+        {id:1,product:"安達 — 傳承守創V",policyNo:"HRE02-00123",policyType:"分紅",paymentTerm:"2年",faceAmountUSD:500000,annualPremiumUSD:25000,actualCostUSD:48000,startYear:2024,lifeCoverUSD:""},
+        {id:2,product:"富衛FWD — 盈聚天下 分紅儲蓄",policyNo:"GFC2-00456",policyType:"壽險",paymentTerm:"5年",faceAmountUSD:300000,annualPremiumUSD:10000,actualCostUSD:49000,startYear:2024,lifeCoverUSD:800000},
+      ]);
+      setStockHoldings([
+        {id:1,code:"2330.TW",name:"台積電",shares:100,costPerShare:880,currentPrice:905,currency:"TWD"},
+        {id:2,code:"TSLA",name:"Tesla",shares:50,costPerShare:179.1,currentPrice:175.2,currency:"USD"},
+      ]);
+      setFixedHoldings([
+        {id:1,product:"萬兆豐 — 金益求兆",amountUSD:100000,startDate:"2024-01",lockYears:2,annualRate:6},
+      ]);
+      setMetalHoldings([
+        {id:1,product:"萬兆豐貴金屬 — 實體黃金",grams:1000,costPerGram:95,currentPricePerGram:106,purchaseDate:"2024-01"},
+      ]);
+      setLoggedIn(true);setLoginLoading(false);return;
+    }
+    // 嘗試 Supabase
     try{
       const user=await loginUser(acct.trim(),pwd);
       setCurrentUser(user);
       setIsKate(user.is_kate);
       setRisk(user.risk_level||"穩健");
-      // 載入用戶資料
       const insData=await loadUserData(user.id,"insurance");
       const stkData=await loadUserData(user.id,"stocks");
       const fixData=await loadUserData(user.id,"fixed");
@@ -883,9 +1037,14 @@ export default function App(){
       const reData=await loadUserData(user.id,"realestate");
       if(metalData&&metalData.length>0)setMetalHoldings(metalData);
       if(reData&&reData.length>0)setRealEstateHoldings(reData);
+      // 讀取 Onboarding 客戶清單（Kate 帳號專用）
+      if(user.is_kate){
+        const onbData=await loadUserData(user.id,"onboarding_clients");
+        if(onbData&&onbData.length>0)setOnboardingList(onbData);
+      }
       setLoggedIn(true);
     }catch(err){
-      setLoginError(err.message||"登入失敗，請重試");
+      setLoginError("帳號或密碼錯誤");
     }finally{setLoginLoading(false);}
   };
 
@@ -933,12 +1092,32 @@ export default function App(){
     const fullCode=isLocal?rawCode.trim()+".TW":rawCode.trim().toUpperCase();
     const isTW=fullCode.endsWith(".TW");
     try{
-      const raw=await generateAI(`股票代碼「${fullCode}」的公司中文名稱和最近收盤價是多少？只輸出純JSON：{"name":"公司中文名稱","price":數字}，不要其他文字。`,200);
+      const query=isTW
+        ?`台股 ${rawCode.trim()} 股票名稱 今日最新股價收盤價`
+        :`${fullCode} stock company name latest price today`;
+      // Step 1: web search
+      const searchText=await searchNews(query);
+      // Step 2: AI parse result into JSON
+      const raw=await generateAI(
+        `根據以下資料，找出股票「${fullCode}」的公司名稱和最新股價。
+只輸出純JSON，不加任何說明或markdown符號：{"name":"公司名稱","price":數字}
+若找不到價格price填0。
+
+資料：${searchText.slice(0,2000)}`,300);
       const cleaned=raw.replace(/```json|```/g,"").trim();
-      const info=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-      setStockForm(p=>({...p,code:fullCode,name:info.name||fullCode,currentPrice:String(info.price||""),currency:isTW?"TWD":"USD"}));
+      const start=cleaned.indexOf("{");const end=cleaned.lastIndexOf("}")+1;
+      const info=JSON.parse(cleaned.slice(start,end));
+      setStockForm(p=>({
+        ...p,
+        code:fullCode,
+        name:info.name||fullCode,
+        currentPrice:(info.price&&Number(info.price)>0)?String(info.price):"",
+        currency:isTW?"TWD":"USD"
+      }));
+      if(!info.price||Number(info.price)===0)showToast("⚠ 無法取得最新價格，請手動輸入");
     }catch{
-      setStockForm(p=>({...p,code:fullCode,name:fullCode,currency:isTW?"TWD":"USD"}));
+      setStockForm(p=>({...p,code:fullCode,name:fullCode,currentPrice:"",currency:isTW?"TWD":"USD"}));
+      showToast("⚠ 查詢失敗，請手動輸入");
     }
     setStockLookupLoading(false);
   };
@@ -976,15 +1155,15 @@ export default function App(){
   const editMetal=(h)=>{setEditMetalId(h.id);setMetalForm({product:h.product,grams:String(h.grams),costPerGram:String(h.costPerGram),currentPricePerGram:String(h.currentPricePerGram),purchaseDate:h.purchaseDate});setShowMetalForm(true);};
   // 房地產 CRUD
   const saveRealEstate=()=>{
-    if(!realEstateForm.amountUSD||!realEstateForm.purchaseDate)return;
-    const item={...realEstateForm,amountUSD:Number(realEstateForm.amountUSD),annualReturn:Number(realEstateForm.annualReturn)||0};
+    if(!realEstateForm.name)return showToast("⚠ 請填寫物件名稱");
+    const item={...realEstateForm,marketValue:Number(realEstateForm.marketValue)||0,govValue:Number(realEstateForm.govValue)||0,mortgage:Number(realEstateForm.mortgage)||0,purchasePrice:Number(realEstateForm.purchasePrice)||0,annualReturn:Number(realEstateForm.annualReturn)||0,amountUSD:realEstateForm.currency==="TWD"?(Number(realEstateForm.marketValue)||0)/USD_TWD:(Number(realEstateForm.marketValue)||0)};
     if(editRealEstateId){setRealEstateHoldings(p=>p.map(h=>h.id===editRealEstateId?{...h,...item}:h));}
     else{setRealEstateHoldings(p=>[...p,{id:Date.now(),...item}]);}
-    setShowRealEstateForm(false);setEditRealEstateId(null);setRealEstateForm(RE_BLANK);showToast("✓ 房地產已儲存");
+    setShowRealEstateForm(false);setEditRealEstateId(null);setRealEstateForm({...RE_BLANK});showToast("✓ 不動產已儲存");
     if(currentUser){const next=editRealEstateId?realEstateHoldings.map(h=>h.id===editRealEstateId?{...h,...item}:h):[...realEstateHoldings,{id:Date.now(),...item}];saveUserData(currentUser.id,"realestate",next).catch(console.error);}
   };
   const deleteRealEstate=(id)=>{const next=realEstateHoldings.filter(h=>h.id!==id);setRealEstateHoldings(next);showToast("✓ 已刪除");if(currentUser)saveUserData(currentUser.id,"realestate",next).catch(console.error);};
-  const editRealEstate=(h)=>{setEditRealEstateId(h.id);setRealEstateForm({product:h.product,amountUSD:String(h.amountUSD),purchaseDate:h.purchaseDate,annualReturn:String(h.annualReturn),notes:h.notes||""});setShowRealEstateForm(true);};
+  const editRealEstate=(h)=>{setEditRealEstateId(h.id);setRealEstateForm({name:h.name||"",propertyType:h.propertyType||"住宅",address:h.address||"",marketValue:String(h.marketValue||""),govValue:String(h.govValue||""),mortgage:String(h.mortgage||""),purchaseYear:String(h.purchaseYear||""),purchasePrice:String(h.purchasePrice||""),annualReturn:String(h.annualReturn||""),currency:h.currency||"TWD",notes:h.notes||""});setShowRealEstateForm(true);};
 
   // ── Health calc ──
   const calcHealthScore=()=>{
@@ -998,14 +1177,74 @@ export default function App(){
   };
   const submitHealthForm=()=>{const s=calcHealthScore();setHealthScore(s);setShowHealthForm(false);showToast(`✓ 健康分更新為 ${s}`);if(currentUser)saveUserData(currentUser.id,"health_score",s).catch(console.error);};
 
+  const calcCoverage=()=>{
+    const me=Number(coverageForm.monthlyExpense)||0;
+    const life=Number(coverageForm.lifeInsurance)||0;
+    const real=Number(coverageForm.realExpense)||0;
+    const daily=Number(coverageForm.dailyHospital)||0;
+    const cancer=Number(coverageForm.cancerLump)||0;
+
+    // 壽險：保額能撐幾年（建議10年）
+    const lifeYears=me>0?Math.round((life/(me*12))*10)/10:0;
+    const lifeTarget=me*12*10; // 建議保額 = 年支出×10
+    const lifeGap=Math.max(0,lifeTarget-life);
+    const lifeScore=life>=lifeTarget?100:Math.round((life/lifeTarget)*100);
+
+    // 實支實付：每次住院報銷（建議 50 萬以上）
+    const realTarget=500000;
+    const realScore=real>=realTarget?100:Math.round((real/realTarget)*100);
+    const realGap=Math.max(0,realTarget-real);
+
+    // 住院日額：每天補貼（建議 3,000 以上）
+    const dailyTarget=3000;
+    const dailyScore=daily>=dailyTarget?100:Math.round((daily/dailyTarget)*100);
+    const dailyGap=Math.max(0,dailyTarget-daily);
+    // 假設平均住院 30 天，算出總補貼
+    const dailyTotal30=daily*30;
+
+    // 癌症：一次金（建議 100 萬以上，含停工+治療）
+    const cancerTarget=1000000;
+    const cancerScore=cancer>=cancerTarget?100:Math.round((cancer/cancerTarget)*100);
+    const cancerGap=Math.max(0,cancerTarget-cancer);
+    // 停工估算：平均停工6個月
+    const cancerStopWork=me*6;
+    const cancerSufficient=cancer>=cancerStopWork;
+
+    const overall=Math.round((lifeScore+realScore+dailyScore+cancerScore)/4);
+    setCoverageResult({lifeYears,lifeTarget,lifeGap,lifeScore,realScore,realGap,realTarget,daily,dailyScore,dailyGap,dailyTarget,dailyTotal30,cancerScore,cancerGap,cancerTarget,cancerStopWork,cancerSufficient,overall,me});
+    setShowCoverageForm(false);
+    showToast("✓ 保障分析已更新");
+  };
+
   // ── Calculators ──
   const calcMortgage=()=>{
     const hv=Number(mtgForm.homeValue)||0,lb=Number(mtgForm.loanBalance)||0;
-    const r=Number(mtgForm.rate)/100/12,n=Number(mtgForm.years)*12,tr=Number(mtgForm.targetRate)/100;
-    const equity=hv-lb,releasable=Math.max(0,Math.round(hv*0.65-lb));
-    const newMonthly=releasable>0&&r>0?Math.round(releasable*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1)):0;
-    const annualReturn=Math.round(releasable*tr),netAnnual=Math.round(annualReturn-newMonthly*12);
-    setMtgResult({equity:Math.round(equity),releasable,newMonthly,annualReturn,netAnnual,feasible:netAnnual>0});
+    const r=(Number(mtgForm.rate)||2.6)/100/12,n=(Number(mtgForm.years)||20)*12,tr=(Number(mtgForm.targetRate)||6)/100;
+    const origMonthly=Number(mtgForm.originalMonthly)||0;
+    const equity=hv-lb,releasable=Math.max(0,Math.round(hv*0.8-lb));
+    const yrs=Number(mtgForm.years)||20;
+    const totalLoan=lb+releasable; // 再融資後總貸款 = 原本金 + 釋出資金
+
+    // 方案一：整筆複利不動（總貸款重新攤還）
+    const newTotalMonthly=totalLoan>0&&r>0?Math.round(totalLoan*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1)):0;
+    const monthlyDiff=newTotalMonthly-origMonthly; // 新月供 vs 原月供差額
+    const futureValue=Math.round(releasable*Math.pow(1+tr,yrs)); // 410萬複利終值（全部淨賺，無需另還）
+
+    // 方案二：只繳息・月配補貼
+    const annualReturn=Math.round(releasable*tr);
+    const monthlyReturn=Math.round(annualReturn/12);
+    const interestOnly=releasable>0?Math.round(releasable*r):0; // 410萬的月息
+    const netAnnualInterest=Math.round(annualReturn-interestOnly*12);
+    const totalMonthlyInterest=origMonthly+interestOnly;
+    const afterSubsidyInterest=totalMonthlyInterest-monthlyReturn;
+
+    setMtgResult({
+      equity:Math.round(equity),releasable,totalLoan,
+      origMonthly,newTotalMonthly,monthlyDiff,
+      futureValue,yrs,
+      annualReturn,monthlyReturn,interestOnly,netAnnualInterest,
+      totalMonthlyInterest,afterSubsidyInterest,
+    });
   };
   const calcRetirement=()=>{
     const ca=Number(retForm.currentAge)||30,ra=Number(retForm.retireAge)||65,cs=Number(retForm.currentSavings)||0,mc=Number(retForm.monthlyContrib)||0,r=Number(retForm.expectedReturn)/100/12,me=Number(retForm.monthlyExpense)||0;
@@ -1017,7 +1256,156 @@ export default function App(){
     setRetResult({total,monthly,gap,years:ra-ca,feasible:gap>=0,shortfall:gap<0?Math.abs(gap):0});
   };
 
-  // ── Messenger ──
+  // 複利計算機
+  const calcCompound=()=>{
+    const p=Number(compForm.principal)||0,r=Number(compForm.rate)/100,y=Number(compForm.years)||0,m=Number(compForm.monthly)||0;
+    const fvLump=Math.round(p*Math.pow(1+r,y));
+    const fvMonthly=r>0?Math.round(m*12*(Math.pow(1+r,y)-1)/r):m*12*y;
+    const total=fvLump+fvMonthly;
+    const gain=total-p-m*12*y;
+    setCompResult({total,fvLump,fvMonthly,gain,years:y});
+  };
+
+  // 遺產稅試算（台灣 2025年）
+  const calcEstate=()=>{
+    const grossAsset=Number(estateForm.totalAsset)||0;
+    const lifeInsRaw=Number(estateForm.lifeInsurance)||0; // 台灣壽險申報金額
+    const lifeInsCap=37400000; // 114年度免納入基本所得額上限 3,740 萬
+    const lifeIns=Math.min(lifeInsRaw,lifeInsCap);    // 超過上限部分仍須計入基本所得額
+    const lifeInsOver=Math.max(0,lifeInsRaw-lifeInsCap); // 超過上限金額
+    const asset=Math.max(0,grossAsset-lifeIns);        // 課稅遺產總額
+    const exempt=13330000;                             // 免稅額 1,333 萬
+    const spouseExempt=estateForm.spouse?5530000:0;    // 配偶扣除額 553 萬
+    const childExempt=Number(estateForm.children)*560000; // 每位子女 56 萬
+    const parentExempt=Number(estateForm.parents)*1380000; // 父母每人 138 萬
+    const funeral=Number(estateForm.funeralExp)||1380000;  // 喪葬費 138 萬
+    const debt=Number(estateForm.debt)||0;             // 未償債務
+    const disabled=Number(estateForm.disabledCount)||0; // 重度身心障礙 每人加扣 693 萬
+    const disabledExempt=disabled*6930000;
+    const totalDeduct=exempt+spouseExempt+childExempt+parentExempt+funeral+debt+disabledExempt;
+    const taxBase=Math.max(0,asset-totalDeduct);
+    // 2025年三級累進稅率：5,621萬以下10%，5,621萬~1億1,242萬15%，超過20%
+    let tax=0;
+    const t1=56210000,t2=112420000;
+    if(taxBase<=t1) tax=Math.round(taxBase*0.1);
+    else if(taxBase<=t2) tax=Math.round(t1*0.1+(taxBase-t1)*0.15);
+    else tax=Math.round(t1*0.1+(t2-t1)*0.15+(taxBase-t2)*0.2);
+    const rate=taxBase<=t1?10:taxBase<=t2?15:20;
+    setEstateResult({grossAsset,lifeInsRaw,lifeIns,lifeInsOver,asset,totalDeduct,taxBase,tax,rate,afterTax:grossAsset-tax,spouseExempt,childExempt,parentExempt,funeral,debt,disabledExempt});
+  };
+
+  // 回本年試算
+  const calcBreakeven=()=>{
+    const prem=Number(breakevenForm.premium)||0;
+    const yrs=Number(breakevenForm.payYears)||2;
+    const r=Number(breakevenForm.targetRate)/100;
+    const totalCost=prem*yrs;
+    // 找到現金價值超過總成本的年份
+    let breakYr=0;
+    for(let y=1;y<=30;y++){
+      const cv=totalCost*Math.pow(1+r,y)*0.85; // 保守估計85%現金值
+      if(cv>=totalCost){breakYr=y;break;}
+    }
+    setBreakevenResult({totalCost,breakYr,projections:Array.from({length:10},(_,i)=>{
+      const y=i+1;
+      return{yr:y,cv:Math.round(totalCost*Math.pow(1+r,y)*0.85),cost:totalCost};
+    })});
+  };
+
+  // 推薦信 AI 生成
+  const genLetter=async(clientName,type)=>{
+    setLetterLoading(true);setLetterResult("");
+    const prompts={
+      referral:`幫我寫一封繁體中文的客戶推薦信，語氣專業溫暖，代表凱特資產管理顧問寫給${clientName||"新客戶"}，介紹我們的服務特色（境外保險、資產配置、財務規劃），150字內。`,
+      thanks:`幫我寫一封繁體中文的感謝信，代表凱特資產管理顧問寫給${clientName||"客戶"}，感謝他們的信任與配合，提到我們會持續守護他們的財務目標，150字內。`,
+      followup:`幫我寫一封繁體中文的跟進信，代表凱特資產管理顧問寫給${clientName||"客戶"}，詢問最近財務狀況，提醒可以預約回顧會議，語氣親切不生硬，100字內。`,
+    };
+    const result=await generateAI(prompts[type]||prompts.referral,400);
+    setLetterResult(result);setLetterLoading(false);
+  };
+
+  // IRR 計算（二分法）
+  const calcIRR=()=>{
+    const py=Number(irrForm.payYears)||2;
+    const ap=Number(irrForm.annualPremium)||0;
+    if(!ap)return showToast("⚠ 請填寫年繳保費");
+    const validRows=irrForm.rows.filter(r=>r.year!==""&&r.value!=="");
+    if(validRows.length<1)return showToast("⚠ 請至少填寫一筆現金價值");
+    // 建構現金流 map：year -> value
+    const cfMap={};
+    validRows.forEach(r=>{cfMap[Number(r.year)]=Number(r.value);});
+    const maxYear=Math.max(...Object.keys(cfMap).map(Number));
+    // 組成完整 cfs 陣列（index = 年份）
+    // 年份 1..py 為繳費（負），之後為 0 直到有現金價值
+    let cfs=[];
+    for(let y=1;y<=maxYear;y++){
+      if(y<=py) cfs.push(cfMap[y]!==undefined?cfMap[y]-ap:-ap);
+      else cfs.push(cfMap[y]||0);
+    }
+    // 最後一筆現金價值設為正的贖回值（若用戶在某年填了值，視為該年贖回）
+    // 確保最後一年有正現金流
+    if(cfs[cfs.length-1]<=0)return showToast("⚠ 最後一年現金價值需大於 0");
+    // 加上第0年（不需要，IRR從第1年算，所以在前面插入0作為基準）
+    cfs=[0,...cfs]; // index 0 = year 0 (no cash flow at time 0 since premiums start year 1)
+    // 重新：第0年 = 0, 第1..py年 = -ap, 之後 = cfMap[y] or 0
+    cfs=[];
+    for(let y=0;y<=maxYear;y++){
+      if(y===0) cfs.push(0);
+      else if(y<=py) cfs.push(cfMap[y]!==undefined?cfMap[y]-ap:-ap);
+      else cfs.push(cfMap[y]||0);
+    }
+    // 二分法求 IRR（年化，基於年份 index）
+    const npv=(r)=>cfs.reduce((sum,cf,t)=>sum+cf/Math.pow(1+r,t),0);
+    let lo=-0.99,hi=10,mid=0,iters=0;
+    while(hi-lo>1e-8&&iters<300){mid=(lo+hi)/2;npv(mid)>0?lo=mid:hi=mid;iters++;}
+    const irr=mid;
+    if(irr<-0.9||irr>9)return showToast("⚠ 無法計算，請確認數字是否正確");
+    const table=cfs.map((cf,t)=>({yr:t,cf,cumPV:cfs.slice(0,t+1).reduce((s,c,i)=>s+c/Math.pow(1+irr,i),0)}));
+    const totalIn=py*ap;
+    setIrrResult({irr,pct:(irr*100).toFixed(2),cfs,table,totalIn,maxYear});
+  };
+
+  // 即時匯率刷新
+  const refreshFxRates=async()=>{
+    setFxLoading(true);
+    try{
+      const raw=await searchNews("USD TWD HKD SGD JPY EUR CNY latest exchange rate today");
+      const result=await generateAI(`根據以下匯率資料，整理出各幣別對 USD 的最新匯率。
+只輸出純JSON，不加任何說明：{"USD":1,"TWD":數字,"HKD":數字,"SGD":數字,"JPY":數字,"EUR":數字,"CNY":數字}
+資料：${raw.slice(0,2000)}`,300);
+      const cleaned=result.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+      if(parsed.TWD&&parsed.JPY){
+        setFxRates(parsed);
+        const now=new Date();
+        setFxUpdatedAt(`${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")} 更新`);
+        showToast("✓ 匯率已更新");
+      }else{showToast("⚠ 無法取得匯率，請稍後再試");}
+    }catch{showToast("⚠ 更新失敗，請稍後再試");}
+    setFxLoading(false);
+  };
+
+  // 房地合一表單 helper
+  const renderReit2Form=(form,setForm)=>(
+    <>
+      {[["成交售價 (TWD)","sellPrice","例如：15000000"],["取得成本 (TWD)","buyPrice","例如：10000000"],["改良+仲介費用 (TWD)","cost","例如：500000"],["持有年數","holdYears","例如：3"]].map(([lbl,k,ph])=>(
+        <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={form[k]||""} onChange={e=>setForm(p=>({...p,[k]:e.target.value}))}/></div>
+      ))}
+      <div className="calc-lbl">交易主體</div>
+      <div style={{display:"flex",gap:8}}>
+        {[["個人","true"],["公司/法人","false"]].map(([lbl,v])=>(
+          <div key={v} onClick={()=>setForm(p=>({...p,isPersonal:v==="true"}))} style={{flex:1,padding:"10px",textAlign:"center",borderRadius:10,border:`1px solid ${String(form.isPersonal)===v?"rgba(154,110,32,.4)":"var(--bl)"}`,background:String(form.isPersonal)===v?"rgba(154,110,32,.1)":"transparent",fontFamily:"'Cinzel',serif",fontSize:10,color:String(form.isPersonal)===v?"#8a5e18":"var(--md)",cursor:"pointer"}}>{lbl}</div>
+        ))}
+      </div>
+      {form.isPersonal&&(
+        <div style={{display:"flex",alignItems:"center",gap:10,marginTop:14,padding:"12px 14px",background:"var(--card2)",borderRadius:10,cursor:"pointer"}} onClick={()=>setForm(p=>({...p,selfUse:!p.selfUse}))}>
+          <div style={{width:20,height:20,borderRadius:6,border:`1px solid ${form.selfUse?"var(--gold)":"var(--bl)"}`,background:form.selfUse?"var(--gold)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",flexShrink:0}}>{form.selfUse?"✓":""}</div>
+          <div style={{fontSize:13,color:"var(--td)"}}>自住且設籍滿 6 年（優惠稅率 10%，獲利 400 萬內免稅）</div>
+        </div>
+      )}
+    </>
+  );
+
   const addMsg=(msg)=>setMsgThread(p=>[...p,{id:Date.now()+Math.random(),...msg}]);
   const handleMsgSend=async(text)=>{
     const q=text||msgInput.trim();if(!q||msgLoading)return;
@@ -1066,9 +1454,32 @@ export default function App(){
   };
 
   // ── Onboarding ──
-  const submitOnboarding=()=>{
-    setOnboardingList(p=>[{id:Date.now(),name:onboardingData.name||"新客戶",date:new Date().toLocaleDateString("zh-TW"),status:"待跟進",risk:onboardingData.riskLevel,goals:onboardingData.goals},...p]);
-    setOnboardingDone(true);showToast("✓ 客戶資料已建立");
+  const submitOnboarding=async()=>{
+    const newClient={
+      id:Date.now(),
+      name:onboardingData.name||"新客戶",
+      date:new Date().toLocaleDateString("zh-TW"),
+      status:"待跟進",
+      risk:onboardingData.riskLevel,
+      goals:onboardingData.goals,
+      age:onboardingData.age,
+      occupation:onboardingData.occupation,
+      annualIncome:onboardingData.annualIncome,
+      assets:onboardingData.assets,
+      concerns:onboardingData.concerns,
+      referral:onboardingData.referral,
+      createdAt:new Date().toISOString(),
+    };
+    const nextList=[newClient,...onboardingList];
+    setOnboardingList(nextList);
+    setOnboardingDone(true);
+    showToast("✓ 客戶資料已建立");
+    // 儲存到 Supabase（用 kate 帳號的 id 作為 owner，或用固定 key）
+    if(currentUser){
+      try{
+        await saveUserData(currentUser.id,"onboarding_clients",nextList);
+      }catch(e){console.error("Onboarding 儲存失敗",e);}
+    }
   };
 
   const unread=notifs.filter(n=>n.unread).length;
@@ -1124,6 +1535,10 @@ export default function App(){
           <button className="l-btn" onClick={loginMode==="login"?handleLogin:handleRegister} disabled={loginLoading||!acct||!pwd} style={{opacity:loginLoading||!acct||!pwd?0.5:1}}>
             {loginLoading?(loginMode==="login"?"驗證中…":"建立帳號中…"):(loginMode==="login"?"LOGIN":"建立帳號")}
           </button>
+          {loginMode==="login"&&<div style={{background:"rgba(200,168,75,0.08)",border:"1px solid rgba(200,168,75,0.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:11,color:"var(--md)",lineHeight:1.7,textAlign:"center"}}>
+            <span style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--gold)",display:"block",marginBottom:4}}>DEMO ACCOUNT</span>
+            帳號：<b style={{color:"var(--td)"}}>Kate</b>　密碼：<b style={{color:"var(--td)"}}>kate2026</b>
+          </div>}
           <div className="l-foot">{loginMode==="login"?"忘記密碼？請聯絡您的專屬顧問":"註冊後即可開始管理您的資產"}</div>
         </div>
       </div>
@@ -1145,15 +1560,22 @@ export default function App(){
         </div>
         <div className="nd-body">{n.body.split("\n\n").map((p,i)=><p key={i}>{p}</p>)}</div>
       </div></div>
-      {/* 貴金屬表單 */}
+      {toast&&<div className="toast">{toast}</div>}
+    </>);
+  }
       {showMetalForm&&(
         <div className="holding-form-overlay" onClick={e=>e.target===e.currentTarget&&setShowMetalForm(false)}>
           <div className="holding-form-sheet">
             <div className="hf-title">{editMetalId?"編輯貴金屬":"新增貴金屬"}</div>
             <div className="hf-lbl" style={{marginTop:0}}>產品</div>
-            <select className="hf-inp" value={metalForm.product} onChange={e=>setMetalForm(p=>({...p,product:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
-              {["萬兆豐貴金屬 — 實體黃金","萬兆豐 — 金盈滿堂（黃金存摺）"].map(pr=><option key={pr} value={pr}>{pr}</option>)}
-            </select>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {["萬兆豐貴金屬 — 實體黃金","萬兆豐 — 金盈滿堂（黃金存摺）"].map(pr=>(
+                <div key={pr} onClick={()=>setMetalForm(p=>({...p,product:pr}))}
+                  style={{padding:"12px 16px",borderRadius:11,border:metalForm.product===pr?"1px solid rgba(184,144,42,.6)":"1px solid var(--bl)",background:metalForm.product===pr?"rgba(184,144,42,.12)":"var(--card2)",cursor:"pointer",fontSize:14,color:"var(--td)",transition:"all .2s"}}>
+                  {metalForm.product===pr&&<span style={{color:"#b8902a",marginRight:8}}>✓</span>}{pr}
+                </div>
+              ))}
+            </div>
             <div className="hf-lbl">重量（公克）</div>
             <input className="hf-inp" type="number" placeholder="例如：1000" value={metalForm.grams} onChange={e=>setMetalForm(p=>({...p,grams:e.target.value}))}/>
             <div className="hf-row">
@@ -1162,7 +1584,8 @@ export default function App(){
             </div>
             <div className="hf-lbl">購入日期</div>
             <input className="hf-inp" type="month" value={metalForm.purchaseDate} onChange={e=>setMetalForm(p=>({...p,purchaseDate:e.target.value}))}/>
-            <button className="hf-save-btn" onClick={saveMetal}>儲存</button>
+            {(!metalForm.grams||!metalForm.purchaseDate)&&<div style={{fontSize:11,color:"var(--md)",marginTop:8,textAlign:"center"}}>請填寫重量與購入日期</div>}
+            <button className="hf-save-btn" onClick={saveMetal} style={{opacity:(!metalForm.grams||!metalForm.purchaseDate)?0.45:1}}>儲存</button>
             <button className="hf-cancel-btn" onClick={()=>setShowMetalForm(false)}>取消</button>
           </div>
         </div>
@@ -1171,20 +1594,51 @@ export default function App(){
       {showRealEstateForm&&(
         <div className="holding-form-overlay" onClick={e=>e.target===e.currentTarget&&setShowRealEstateForm(false)}>
           <div className="holding-form-sheet">
-            <div className="hf-title">{editRealEstateId?"編輯房地產":"新增房地產"}</div>
-            <div className="hf-lbl" style={{marginTop:0}}>產品</div>
-            <select className="hf-inp" value={realEstateForm.product} onChange={e=>setRealEstateForm(p=>({...p,product:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
-              {["萬兆豐 — 瓦努阿圖預售屋"].map(pr=><option key={pr} value={pr}>{pr}</option>)}
-            </select>
-            <div className="hf-lbl">投入金額（USD）</div>
-            <input className="hf-inp" type="number" placeholder="例如：400000" value={realEstateForm.amountUSD} onChange={e=>setRealEstateForm(p=>({...p,amountUSD:e.target.value}))}/>
-            <div className="hf-row">
-              <div style={{flex:1}}><div className="hf-lbl">購入日期</div><input className="hf-inp" type="month" value={realEstateForm.purchaseDate} onChange={e=>setRealEstateForm(p=>({...p,purchaseDate:e.target.value}))}/></div>
-              <div style={{flex:1,marginLeft:8}}><div className="hf-lbl">預計年化報酬（%）</div><input className="hf-inp" type="number" placeholder="例如：8" value={realEstateForm.annualReturn} onChange={e=>setRealEstateForm(p=>({...p,annualReturn:e.target.value}))}/></div>
+            <div className="hf-title">{editRealEstateId?"編輯不動產":"新增不動產"}</div>
+
+            <div className="hf-lbl" style={{marginTop:0}}>物件名稱</div>
+            <input className="hf-inp" placeholder="例如：台北大安區住宅、新竹竹北透天" value={realEstateForm.name} onChange={e=>setRealEstateForm(p=>({...p,name:e.target.value}))}/>
+
+            <div className="hf-lbl">物件類型</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {["住宅","商辦","店面","土地","預售屋","海外"].map(t=>(
+                <div key={t} className={`hf-type-chip ${realEstateForm.propertyType===t?"active":""}`} onClick={()=>setRealEstateForm(p=>({...p,propertyType:t}))} style={{padding:"8px 14px"}}>{t}</div>
+              ))}
             </div>
+
+            <div className="hf-lbl">地址（選填）</div>
+            <input className="hf-inp" placeholder="例如：台北市大安區敦化南路..." value={realEstateForm.address} onChange={e=>setRealEstateForm(p=>({...p,address:e.target.value}))}/>
+
+            <div className="hf-lbl">幣別</div>
+            <div style={{display:"flex",gap:8}}>
+              {["TWD","USD"].map(c=>(
+                <div key={c} onClick={()=>setRealEstateForm(p=>({...p,currency:c}))} style={{flex:1,padding:"10px",textAlign:"center",borderRadius:10,border:`1px solid ${realEstateForm.currency===c?"rgba(154,110,32,.4)":"var(--bl)"}`,background:realEstateForm.currency===c?"rgba(154,110,32,.1)":"transparent",fontFamily:"'Cinzel',serif",fontSize:11,color:realEstateForm.currency===c?"#8a5e18":"var(--md)",cursor:"pointer"}}>{c}</div>
+              ))}
+            </div>
+
+            <div className="hf-lbl">市場估值（{realEstateForm.currency}）</div>
+            <input className="hf-inp" type="number" placeholder={realEstateForm.currency==="TWD"?"例如：15000000":"例如：400000"} value={realEstateForm.marketValue} onChange={e=>setRealEstateForm(p=>({...p,marketValue:e.target.value}))}/>
+
+            {realEstateForm.currency==="TWD"&&(
+              <>
+                <div className="hf-lbl">公告現值（選填，用於稅務試算）</div>
+                <input className="hf-inp" type="number" placeholder="例如：8000000" value={realEstateForm.govValue} onChange={e=>setRealEstateForm(p=>({...p,govValue:e.target.value}))}/>
+              </>
+            )}
+
+            <div className="hf-lbl">房貸餘額（選填）</div>
+            <input className="hf-inp" type="number" placeholder="例如：8000000（無貸款填0）" value={realEstateForm.mortgage} onChange={e=>setRealEstateForm(p=>({...p,mortgage:e.target.value}))}/>
+
+            <div className="hf-row">
+              <div style={{flex:1}}><div className="hf-lbl">購入年份（選填）</div><input className="hf-inp" type="number" placeholder="例如：2018" value={realEstateForm.purchaseYear} onChange={e=>setRealEstateForm(p=>({...p,purchaseYear:e.target.value}))}/></div>
+              <div style={{flex:1,marginLeft:8}}><div className="hf-lbl">購入價格（選填）</div><input className="hf-inp" type="number" placeholder="例如：12000000" value={realEstateForm.purchasePrice} onChange={e=>setRealEstateForm(p=>({...p,purchasePrice:e.target.value}))}/></div>
+            </div>
+
             <div className="hf-lbl">備註（選填）</div>
-            <input className="hf-inp" placeholder="例如：已取得黃金護照" value={realEstateForm.notes} onChange={e=>setRealEstateForm(p=>({...p,notes:e.target.value}))}/>
-            <button className="hf-save-btn" onClick={saveRealEstate}>儲存</button>
+            <input className="hf-inp" placeholder="例如：自住、出租、預售..." value={realEstateForm.notes} onChange={e=>setRealEstateForm(p=>({...p,notes:e.target.value}))}/>
+
+            {!realEstateForm.name&&<div style={{fontSize:12,color:"#b05060",textAlign:"center",marginTop:8}}>⚠ 請填寫物件名稱才能儲存</div>}
+            <button className="hf-save-btn" onClick={saveRealEstate} style={{opacity:realEstateForm.name?1:0.5}}>儲存</button>
             <button className="hf-cancel-btn" onClick={()=>setShowRealEstateForm(false)}>取消</button>
           </div>
         </div>
@@ -1200,10 +1654,6 @@ export default function App(){
           </div>
         </div>
       )}
-      {toast&&<div className="toast">{toast}</div>}
-    </>);
-  }
-
   if(screen?.type==="stock"){
     const s=screen.data;const cp=generateChartPath(s.up);
     return(<><style>{S}</style>
@@ -1273,6 +1723,48 @@ export default function App(){
             </div>
           ))}
         </div>
+        {/* 稅務行事曆 */}
+        <div className="set-group">
+          <div className="set-gl">📅 稅務行事曆</div>
+          {(()=>{
+            const today=new Date();
+            const year=today.getFullYear();
+            return TAX_CALENDAR.map(t=>{
+              const start=new Date(year,t.month-1,t.day);
+              const end=new Date(year,t.endMonth-1,t.endDay);
+              const isActive=today>=start&&today<=end;
+              const daysToEnd=Math.ceil((end-today)/(1000*60*60*24));
+              const daysToStart=Math.ceil((start-today)/(1000*60*60*24));
+              const isPast=today>end;
+              return(
+                <div key={t.key} style={{display:"flex",gap:12,alignItems:"center",padding:"12px 16px",borderBottom:"1px solid var(--bl)",opacity:isPast?0.45:1}}>
+                  <div style={{width:36,height:36,borderRadius:10,background:isActive?"rgba(42,138,90,.12)":isPast?"var(--card2)":"rgba(154,110,32,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{t.icon}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--td)",marginBottom:2}}>{t.name}</div>
+                    <div style={{fontSize:11,color:"var(--md)"}}>
+                      {year}/{t.month}/{t.day} — {year}/{t.endMonth}/{t.endDay}
+                    </div>
+                  </div>
+                  <div style={{flexShrink:0,textAlign:"right"}}>
+                    {isPast?(
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"var(--md)"}}>已截止</div>
+                    ):isActive?(
+                      <div style={{padding:"3px 10px",borderRadius:20,background:"rgba(42,138,90,.12)",border:"1px solid rgba(42,138,90,.25)"}}>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"#1a6e42",letterSpacing:1}}>進行中</div>
+                        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"#1a6e42",textAlign:"center"}}>{daysToEnd}天</div>
+                      </div>
+                    ):(
+                      <div style={{padding:"3px 10px",borderRadius:20,background:daysToStart<=14?"rgba(176,80,96,.08)":"rgba(154,110,32,.08)",border:`1px solid ${daysToStart<=14?"rgba(176,80,96,.2)":"rgba(154,110,32,.2)"}`}}>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:daysToStart<=14?"#b05060":"#8a5e18",letterSpacing:1}}>剩</div>
+                        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:daysToStart<=14?"#b05060":"#8a5e18",textAlign:"center"}}>{daysToStart}天</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
         <div className="set-group">
           <div className="set-gl">風險偏好</div>
           <div className="risk-row">{["保守","穩健","積極"].map(r=><button key={r} className={`risk-chip ${risk===r?"active":""}`} onClick={()=>setRisk(r)}>{r}</button>)}</div>
@@ -1292,7 +1784,7 @@ export default function App(){
   const tabs=[
     {id:"home",icon:"⬡",label:"首頁"},
     {id:"assets",icon:"◉",label:"資產"},
-    {id:"explore",icon:"◎",label:"市場"},
+    {id:"calc",icon:"🧮",label:"試算"},
     {id:"advisor",icon:"✦",label:"顧問",badge:unread},
   ];
 
@@ -1305,77 +1797,51 @@ export default function App(){
         {tab==="home"&&(
           <div>
             <div className="home-hero">
-              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:0}}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
                 <div>
                   <div className="home-greeting">Welcome Back</div>
                   <div className="home-name">{currentUser?.display_name||"尊榮會員"}</div>
-                  <div className="home-date">2026年 4月 9日</div>
+                  <div className="home-date">{new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric",weekday:"short"})}</div>
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center",marginTop:4}}>
-                  {isKate&&<div style={{background:"var(--gold-dim)",border:"1px solid rgba(200,168,75,.3)",borderRadius:20,padding:"6px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--gold)",cursor:"pointer"}} onClick={()=>{setTab("advisor");setAdvisorSub("picks");}}>後台 ✦</div>}
+                  {isKate&&<div style={{background:"var(--gold-dim)",border:"1px solid rgba(200,168,75,.3)",borderRadius:20,padding:"6px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--gold)",cursor:"pointer"}} onClick={()=>{setTab("advisor");setAdvisorSub("kattools");}}>後台 ✦</div>}
                   <div className="avatar-btn" onClick={()=>setScreen({type:"profile"})}>👤</div>
                 </div>
               </div>
             </div>
 
-            {/* 總資產大卡 */}
-            <div style={{margin:"0 16px 12px"}}>
-              <div className="asset-card">
-                <div className="asset-lbl">總資產估值</div>
-                <div className="asset-val">{fmtTWD(grandTotalTWD)}</div>
-                <div className="asset-chg">▲ +42,300　今日 +1.11%</div>
-                <div className="asset-breakdown">
-                  <div className="ab-item"><div className="ab-lbl">保險</div><div className="ab-val" style={{color:"var(--gold)",fontSize:11}}>{fmtUSD(totalInsUSD)}</div></div>
-                  <div className="ab-item"><div className="ab-lbl">股票</div><div className="ab-val" style={{color:"var(--blue)",fontSize:11}}>{fmtTWD(totalStockTWD)}</div></div>
-                  <div className="ab-item"><div className="ab-lbl">固收</div><div className="ab-val" style={{color:"var(--green)",fontSize:11}}>{fmtUSD(totalFixedUSD)}</div></div>
-                  <div className="ab-item"><div className="ab-lbl">現金</div><div className="ab-val" style={{color:"var(--silver)",fontSize:11}}>20%</div></div>
-                </div>
-              </div>
-            </div>
-
-            {/* 財務健康分 */}
-            <div style={{margin:"0 16px 12px"}}>
-              <div className="health-mini" onClick={()=>{setTab("assets");setAssetsSub("health");}}>
-                <div className="hm-ring" style={{background:`conic-gradient(#4aaa80 0% ${healthScore||72}%,rgba(240,242,245,.1) ${healthScore||72}% 100%)`}}>
-                  <div style={{width:36,height:36,borderRadius:"50%",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:700,color:"var(--green)"}}>{healthScore||72}</div>
-                </div>
-                <div className="hm-info">
-                  <div className="hm-title">財務健康分</div>
-                  <div className="hm-desc">{(healthScore||72)>=80?"優秀，繼續保持！":(healthScore||72)>=60?"良好，退休與保險配置仍有空間":"建議填寫健檢，了解改善方向"}</div>
-                </div>
-                <div className="hm-arr">›</div>
-              </div>
-            </div>
-
-            {/* 凱特今日建議 */}
-            <div className="sec">凱特今日建議</div>
-            <div style={{margin:"0 16px 12px"}}>
-              <div className="kate-suggest" onClick={()=>{setTab("advisor");setAdvisorSub("picks");}}>
-                <div className="ks-head">
-                  <div className="ks-badge">✦ 本週精選</div>
-                </div>
-                <div className="ks-title">{publishedPicks?.title||katePosts[0].title}</div>
-                <div className="ks-preview">{publishedPicks?.body?.slice(0,80)||katePosts[0].preview}…</div>
-                <div className="ks-action">
-                  <div className="ks-more">查看完整建議 →</div>
-                </div>
-              </div>
-            </div>
-
-            {/* 市場指數 */}
-            <div className="sec">市場概況</div>
+            {/* 股市指數 */}
+            <div className="sec">市場指數{indicesLoading&&<span style={{fontFamily:"'Noto Sans TC',sans-serif",fontSize:10,letterSpacing:0,color:"rgba(245,225,185,.4)",marginLeft:8}}>更新中…</span>}</div>
             <div className="idx" style={{margin:"0 16px 12px"}}>
-              {indices.map((m,i)=><div className="ii" key={i}><div className="ii-n">{m.name}</div><div className="ii-v">{m.val}</div><div className={`ii-c ${m.up?"up":"dn"}`}>{m.chg}</div></div>)}
+              {liveIndices.map((m,i)=><div className="ii" key={i}><div className="ii-n">{m.name}</div><div className="ii-v">{m.val}</div><div className={`ii-c ${m.up?"up":"dn"}`}>{m.chg}</div></div>)}
             </div>
 
-            {/* 即時新聞 */}
-            <div className="sec">今日要聞</div>
-            {newsLoading?(
-              <div style={{margin:"0 16px 12px",padding:"16px",background:"var(--card)",borderRadius:14,display:"flex",alignItems:"center",gap:12}}>
-                <div className="spin" style={{width:20,height:20,borderWidth:"1.5px"}}/>
-                <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)"}}>載入最新新聞…</div>
-              </div>
-            ):(liveNews.length>0?liveNews:ALL_NEWS).slice(0,2).map((n,i)=>(
+            {/* 黃金白銀 */}
+            <div className="sec">貴金屬行情</div>
+            <div style={{margin:"0 16px 12px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {[
+                {name:"黃金",unit:"USD/oz",price:"3,312",chg:"+1.8%",up:true,icon:"🥇"},
+                {name:"白銀",unit:"USD/oz",price:"32.45",chg:"+0.6%",up:true,icon:"🥈"},
+                {name:"黃金",unit:"TWD/g",price:"3,348",chg:"+1.8%",up:true,icon:"💛"},
+                {name:"鉑金",unit:"USD/oz",price:"986",chg:"-0.3%",up:false,icon:"⬜"},
+              ].map((m,i)=>(
+                <div key={i} style={{background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"12px 14px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                    <span style={{fontSize:16}}>{m.icon}</span>
+                    <div>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"var(--md)",textTransform:"uppercase"}}>{m.name}</div>
+                      <div style={{fontSize:10,color:"var(--md)"}}>{m.unit}</div>
+                    </div>
+                  </div>
+                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:16,fontWeight:700,color:"#2c1e0f"}}>{m.price}</div>
+                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:m.up?"#1a6e42":"#b05060",marginTop:2}}>{m.chg}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 新聞精選 */}
+            <div className="sec">新聞精選</div>
+            {ALL_NEWS.slice(0,4).map((n,i)=>(
               <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})}>
                 <div className="nc-emoji">{n.emoji||"📰"}</div>
                 <div style={{flex:1,minWidth:0}}>
@@ -1397,7 +1863,7 @@ export default function App(){
               <div className="ph-t">我的資產</div>
             </div>
             <div className="sub-tabs">
-              {[{id:"holdings",label:"💼 持有"},{id:"health",label:"🏥 財務健檢"},{id:"calc",label:"🧮 試算"}].map(t=>(
+              {[{id:"holdings",label:"💼 持有"},{id:"coverage",label:"🛡️ 保障"},{id:"health",label:"🏥 健檢"}].map(t=>(
                 <div key={t.id} className={`st ${assetsSub===t.id?"active":""}`} onClick={()=>setAssetsSub(t.id)}>{t.label}</div>
               ))}
             </div>
@@ -1521,7 +1987,10 @@ export default function App(){
                         </div>
                       );
                     })}
-                    {/* 貴金屬 */}
+                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditFixedId(null);setShowFixedForm(true);}}>+ 新增固收</button>
+                  </div>
+                )}
+                {/* 貴金屬 */}
                 {holdingsTab==="metal"&&(
                   <div className="hld-list">
                     {metalHoldings.map(h=>{
@@ -1555,32 +2024,114 @@ export default function App(){
                 {/* 房地產 */}
                 {holdingsTab==="realestate"&&(
                   <div className="hld-list">
-                    {realEstateHoldings.map(h=>(
-                      <div className="hld-item" key={h.id}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                          <div>
-                            <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:"var(--rose)",textTransform:"uppercase",marginBottom:4}}>🏠 房地產</div>
-                            <div className="hld-item-name">{h.product}</div>
-                            <div className="hld-item-type">{h.purchaseDate} · {h.annualReturn}% p.a.</div>
+                    {realEstateHoldings.map(h=>{
+                      const equity=Math.max(0,(h.marketValue||0)-(h.mortgage||0));
+                      const holdYrs=h.purchaseYear?new Date().getFullYear()-Number(h.purchaseYear):null;
+                      const gain=h.purchasePrice?(h.marketValue||0)-h.purchasePrice:null;
+                      return(
+                        <div className="hld-item" key={h.id}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                                <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:"var(--rose)",textTransform:"uppercase"}}>🏠 {h.propertyType||"不動產"}</div>
+                                {holdYrs&&<div style={{fontFamily:"'Cinzel',serif",fontSize:8,color:"var(--md)"}}>持有 {holdYrs} 年</div>}
+                              </div>
+                              <div className="hld-item-name">{h.name}</div>
+                              {h.address&&<div style={{fontSize:11,color:"var(--md)",marginTop:2}}>{h.address}</div>}
+                            </div>
+                            <div style={{textAlign:"right",flexShrink:0,marginLeft:8}}>
+                              <div style={{fontSize:10,color:"var(--md)",marginBottom:2}}>市值</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:"var(--rose)"}}>{h.currency==="TWD"?`NT$ ${(h.marketValue||0).toLocaleString()}`:`USD ${(h.marketValue||0).toLocaleString()}`}</div>
+                            </div>
                           </div>
-                          <div style={{textAlign:"right"}}>
-                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:"var(--rose)"}}>USD {Number(h.amountUSD).toLocaleString()}</div>
+                          {/* 淨值/貸款/獲利 */}
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
+                            <div style={{padding:"6px 8px",background:"var(--card2)",borderRadius:8,textAlign:"center"}}>
+                              <div style={{fontSize:10,color:"var(--md)",marginBottom:2}}>淨值</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"#1a6e42"}}>{h.currency==="TWD"?`NT$ ${Math.round(equity/10000)}萬`:`USD ${Math.round(equity/1000)}K`}</div>
+                            </div>
+                            <div style={{padding:"6px 8px",background:"var(--card2)",borderRadius:8,textAlign:"center"}}>
+                              <div style={{fontSize:10,color:"var(--md)",marginBottom:2}}>貸款</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#b05060"}}>{h.mortgage?`NT$ ${Math.round(h.mortgage/10000)}萬`:"無"}</div>
+                            </div>
+                            <div style={{padding:"6px 8px",background:"var(--card2)",borderRadius:8,textAlign:"center"}}>
+                              <div style={{fontSize:10,color:"var(--md)",marginBottom:2}}>獲利</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:gain&&gain>0?"#1a6e42":gain&&gain<0?"#b05060":"var(--md)"}}>{gain!=null?(gain>0?"+":"")+`NT$ ${Math.round(gain/10000)}萬`:"—"}</div>
+                            </div>
+                          </div>
+                          {/* 快速連結試算 */}
+                          {h.purchaseYear&&h.purchasePrice&&(
+                            <div style={{fontSize:11,color:"#8a5e18",marginBottom:8,cursor:"pointer",textDecoration:"underline"}} onClick={()=>{
+                              setReit2Form({sellPrice:String(h.marketValue||""),buyPrice:String(h.purchasePrice||""),cost:"",holdYears:String(holdYrs||""),isPersonal:true,selfUse:false});
+                              setTab("calc");setCalcMode("realestate2");
+                            }}>🏢 試算此物件房地合一稅 →</div>
+                          )}
+                          {h.notes&&<div style={{fontSize:11,color:"var(--md)",marginBottom:8}}>{h.notes}</div>}
+                          <div className="hld-actions">
+                            <button className="hld-edit-btn" onClick={()=>editRealEstate(h)}>✎ 編輯</button>
+                            <button className="hld-del-btn" onClick={()=>deleteRealEstate(h.id)}>✕</button>
                           </div>
                         </div>
-                        {h.notes&&<div style={{fontSize:11,color:"var(--md)",marginBottom:8}}>{h.notes}</div>}
-                        <div className="hld-actions">
-                          <button className="hld-edit-btn" onClick={()=>editRealEstate(h)}>✎ 編輯</button>
-                          <button className="hld-del-btn" onClick={()=>deleteRealEstate(h.id)}>✕</button>
-                        </div>
-                      </div>
-                    ))}
-                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditRealEstateId(null);setRealEstateForm({product:"萬兆豐 — 瓦努阿圖預售屋",amountUSD:"",purchaseDate:"",annualReturn:"",notes:""});setShowRealEstateForm(true);}}>+ 新增房地產</button>
-                  </div>
-                )}
-                                <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditFixedId(null);setShowFixedForm(true);}}>+ 新增固收</button>
+                      );
+                    })}
+                    <button className="add-btn" style={{marginBottom:24}} onClick={()=>{setEditRealEstateId(null);setRealEstateForm({...RE_BLANK});setShowRealEstateForm(true);}}>+ 新增不動產</button>
                   </div>
                 )}
               </>
+            )}
+
+            {/* ─ 保障覆蓋率 ─ */}
+            {assetsSub==="coverage"&&(
+              <div style={{paddingTop:16,paddingBottom:24}}>
+                {coverageResult?(
+                  <div style={{margin:"0 16px"}}>
+                    {/* 總分卡 */}
+                    <div style={{background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,overflow:"hidden",marginBottom:12}}>
+                      <div style={{padding:"16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid var(--bl)"}}>
+                        <div>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:coverageResult.overall>=70?"#1a6e42":"#b05060",textTransform:"uppercase",marginBottom:4}}>整體保障覆蓋率</div>
+                          <div style={{fontSize:13,color:"var(--md)"}}>基於您填寫的保障資料</div>
+                        </div>
+                        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:36,fontWeight:700,color:coverageResult.overall>=70?"#1a6e42":"#b05060"}}>{coverageResult.overall}%</div>
+                      </div>
+                      <div style={{padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                        {[
+                          {label:"壽險",icon:"💙",score:coverageResult.lifeScore,desc:`可撐 ${coverageResult.lifeYears} 年`,gap:coverageResult.lifeGap>0?`缺 NT$ ${Math.round(coverageResult.lifeGap/10000)}萬`:null},
+                          {label:"實支實付",icon:"🏥",score:coverageResult.realScore,desc:`NT$ ${(Number(coverageForm.realExpense)||0).toLocaleString()}/次`,gap:coverageResult.realGap>0?`缺 NT$ ${Math.round(coverageResult.realGap/10000)}萬`:null},
+                          {label:"住院日額",icon:"🛏️",score:coverageResult.dailyScore,desc:`NT$ ${(Number(coverageForm.dailyHospital)||0).toLocaleString()}/天`,gap:coverageResult.dailyGap>0?`缺 NT$ ${coverageResult.dailyGap}/天`:null},
+                          {label:"癌症一次金",icon:"🎗️",score:coverageResult.cancerScore,desc:`NT$ ${(Number(coverageForm.cancerLump)||0).toLocaleString()}`,gap:coverageResult.cancerGap>0?`缺 NT$ ${Math.round(coverageResult.cancerGap/10000)}萬`:null},
+                        ].map((item,i)=>(
+                          <div key={i} style={{padding:"10px 12px",background:"var(--card2)",borderRadius:10,border:`1px solid ${item.score>=70?"rgba(42,138,90,.15)":"rgba(176,80,96,.15)"}`}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                              <div style={{fontSize:12,fontWeight:600,color:"var(--td)"}}>{item.icon} {item.label}</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:item.score>=70?"#1a6e42":"#b05060"}}>{item.score}%</div>
+                            </div>
+                            <div style={{height:4,background:"var(--bl)",borderRadius:2,marginBottom:6}}>
+                              <div style={{height:4,borderRadius:2,width:`${item.score}%`,background:item.score>=70?"#1a6e42":"#b05060",transition:"width .4s"}}/>
+                            </div>
+                            <div style={{fontSize:11,color:"var(--md)"}}>{item.desc}</div>
+                            {item.gap&&<div style={{fontSize:11,color:"#b05060",marginTop:2,fontWeight:600}}>⚠ {item.gap}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button className="calc-btn" onClick={()=>setShowCoverageForm(true)}>✎ 更新保障資料</button>
+                    {coverageResult.overall<70&&(
+                      <div style={{marginTop:10,padding:"12px 14px",background:"rgba(176,80,96,.06)",borderRadius:12,border:"1px solid rgba(176,80,96,.15)",cursor:"pointer"}} onClick={()=>setShowMsg(true)}>
+                        <div style={{fontSize:12,color:"#b05060",lineHeight:1.7}}>⚠ 保障仍有缺口，建議諮詢凱特顧問進行完整規劃 →</div>
+                      </div>
+                    )}
+                  </div>
+                ):(
+                  <div style={{margin:"0 16px",background:"var(--card)",border:"1px dashed rgba(176,80,96,.3)",borderRadius:14,padding:"24px 16px",textAlign:"center"}}>
+                    <div style={{fontSize:32,marginBottom:12}}>🛡️</div>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"#b05060",textTransform:"uppercase",marginBottom:8}}>尚未填寫保障資料</div>
+                    <div style={{fontSize:14,color:"var(--td)",fontWeight:600,marginBottom:6}}>了解您的保障缺口</div>
+                    <div style={{fontSize:13,color:"var(--md)",lineHeight:1.7,marginBottom:16}}>壽險 · 實支實付 · 住院日額 · 癌症理賠<br/>填寫後立即看見覆蓋率與缺口分析</div>
+                    <button className="calc-btn" onClick={()=>setShowCoverageForm(true)}>開始填寫保障資料 →</button>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ─ 財務健檢 ─ */}
@@ -1612,37 +2163,122 @@ export default function App(){
                 <div style={{height:16}}/>
               </>
             )}
+          </div>
+        )}
 
-            {/* ─ 試算 ─ */}
-            {assetsSub==="calc"&&(
-              <div className="calc-section" style={{paddingTop:16}}>
-                {/* 試算切換 */}
-                <div style={{display:"flex",gap:10,marginBottom:16}}>
-                  {[{id:"mortgage",label:"🏠 房貸活化"},{id:"retire",label:"🏖️ 退休金"}].map(c=>(
-                    <div key={c.id} onClick={()=>setCalcMode(c.id)} style={{flex:1,padding:"11px",textAlign:"center",borderRadius:12,border:`1px solid ${calcMode===c.id?"rgba(200,168,75,.4)":"var(--bl)"}`,background:calcMode===c.id?"var(--gold-dim)":"transparent",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1,color:calcMode===c.id?"var(--gold)":"var(--md)",cursor:"pointer",transition:"all .2s"}}>{c.label}</div>
-                  ))}
-                </div>
+        {/* ════ CALC ════ */}
+        {tab==="calc"&&(
+          <div>
+            <div className="ph">
+              <div className="ph-en">Calculator</div>
+              <div className="ph-t">財務試算</div>
+            </div>
+            <div className="calc-section" style={{paddingTop:8}}>
+              {/* 工具選單 */}
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+                {[{id:"mortgage",label:"🏠 房貸活化"},{id:"retire",label:"🏖️ 退休金"},{id:"compound",label:"📈 複利"},{id:"estate",label:"📋 遺產稅"},{id:"incometax",label:"💼 綜所稅"},{id:"realestate2",label:"🏢 房地合一"},{id:"fx",label:"💱 匯率"},{id:"rule72",label:"⚡ 72法則"},{id:"inflation",label:"📉 通膨"},{id:"breakeven",label:"🔄 回本年"},{id:"irr",label:"📊 IRR 試算"},{id:"gift",label:"🎁 贈與稅"}].map(c=>(
+                  <div key={c.id} onClick={()=>setCalcMode(c.id)} style={{padding:"9px 14px",borderRadius:20,border:`1px solid ${calcMode===c.id?"rgba(154,110,32,.5)":"var(--bl)"}`,background:calcMode===c.id?"rgba(154,110,32,.12)":"transparent",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1,color:calcMode===c.id?"#8a5e18":"var(--md)",cursor:"pointer",transition:"all .2s",whiteSpace:"nowrap"}}>{c.label}</div>
+                ))}
+              </div>
+
                 {/* 房貸活化 */}
                 {calcMode==="mortgage"&&(
                   <>
                     <div className="calc-card">
                       <div className="calc-title">🏠 房貸活化試算</div>
                       <div className="calc-desc">透過房屋淨值再融資，釋出資金投入高報酬商品，評估是否能產生正現金流。</div>
-                      {[["房屋估值 (TWD)","homeValue","例如：20000000"],["剩餘房貸 (TWD)","loanBalance","例如：8000000"],["目前房貸利率 (%)","rate","例如：2.5"],["再融資年期 (年)","years","例如：20"],["目標投資年化報酬 (%)","targetRate","例如：6"]].map(([lb,k,ph])=>(
-                        <div key={k}><div className="calc-lbl">{lb}</div><input className="calc-inp" type="number" placeholder={ph} value={mtgForm[k]} onChange={e=>setMtgForm(p=>({...p,[k]:e.target.value}))}/></div>
+                      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+                        <button onClick={()=>setMtgForm({homeValue:"20000000",loanBalance:"8000000",rate:"2.6",years:"20",targetRate:"6",originalMonthly:"35000"})} style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1,color:"#9a6e20",background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.2)",borderRadius:8,padding:"5px 12px",cursor:"pointer"}}>填入範例數字</button>
+                      </div>
+                      {[["房屋估值 (TWD)","homeValue","例如：20000000"],["剩餘房貸 (TWD)","loanBalance","例如：8000000（無房貸填 0）"],["目前每月房貸月供 (TWD)","originalMonthly","例如：35000（無房貸填 0）"],["再融資利率 (%)","rate","例如：2.5"],["再融資年期 (年)","years","例如：20"],["目標投資年化報酬 (%)","targetRate","例如：6"]].map(([lbl,k,ph])=>(
+                        <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={mtgForm[k]} onChange={e=>setMtgForm(p=>({...p,[k]:e.target.value}))}/></div>
                       ))}
-                      <button className="calc-btn" onClick={calcMortgage}>試算活化效益 →</button>
+                      {(!mtgForm.homeValue||Number(mtgForm.homeValue)===0)&&<div style={{fontSize:13,color:"#b05060",marginTop:8,padding:"8px 12px",background:"rgba(176,80,96,.08)",borderRadius:8}}>⚠ 請先填入房屋估值</div>}
+                      <button className="calc-btn" onClick={calcMortgage} style={{opacity:(!mtgForm.homeValue||Number(mtgForm.homeValue)===0)?0.4:1}}>試算活化效益 →</button>
                     </div>
                     {mtgResult&&(
-                      <div className="calc-result" style={{border:`1px solid ${mtgResult.feasible?"rgba(58,170,120,.3)":"rgba(216,88,104,.25)"}`}}>
-                        <div className="calc-res-hd" style={{color:mtgResult.feasible?"var(--green)":"var(--rose)"}}>{mtgResult.feasible?"✓ 活化方案可行":"⚠ 活化方案需謹慎評估"}</div>
-                        {[["房屋淨值","NT$ "+mtgResult.equity.toLocaleString()],["可釋出資金 (65% LTV)","NT$ "+mtgResult.releasable.toLocaleString()],["新增月供估算","NT$ "+mtgResult.newMonthly.toLocaleString()+"/月"],["年化預期收益","NT$ "+mtgResult.annualReturn.toLocaleString()+"/年"],["扣除月供後淨收益","NT$ "+mtgResult.netAnnual.toLocaleString()+"/年"]].map(([l,v],i)=>(
-                          <div className="calc-res-row" key={i}>
-                            <div className="calc-res-lbl">{l}</div>
-                            <div className="calc-res-val" style={i===4?{color:mtgResult.feasible?"var(--green)":"var(--red)"}:{}}>{v}</div>
-                          </div>
+                      <div className="calc-result" style={{border:"1px solid rgba(140,110,80,.2)"}}>
+                        <div className="calc-res-hd" style={{color:"#5a3e28"}}>活化基本資訊</div>
+                        {[
+                          ["房屋淨值","NT$ "+mtgResult.equity.toLocaleString()],
+                          ["可釋出活化資金 (80% LTV)","NT$ "+mtgResult.releasable.toLocaleString()],
+                          ["再融資後總貸款","NT$ "+mtgResult.totalLoan.toLocaleString()],
+                        ].map(([l,v])=>(
+                          <div className="calc-res-row" key={l}><div className="calc-res-lbl">{l}</div><div className="calc-res-val">{v}</div></div>
                         ))}
-                        <div className="calc-note" style={{background:mtgResult.feasible?"var(--green-dim)":"var(--rose-dim)",color:mtgResult.feasible?"var(--green)":"var(--rose)"}}>{mtgResult.feasible?`每年可產生約 NT$ ${mtgResult.netAnnual.toLocaleString()} 正現金流，建議搭配分紅保單等穩健商品配置。`:`扣除月供後每年仍有 NT$ ${Math.abs(mtgResult.netAnnual).toLocaleString()} 缺口，需確認資金承受能力再決策。`}</div>
+
+                        {/* 方案一：整筆複利不動 */}
+                        <div style={{margin:"16px 0 8px",padding:"16px",background:"rgba(42,138,90,.06)",border:"1px solid rgba(42,138,90,.2)",borderRadius:14}}>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"#1a6e42",textTransform:"uppercase",marginBottom:6,fontWeight:700}}>方案一：整筆複利・資產累積型</div>
+                          <div style={{fontSize:12,color:"#4a6858",lineHeight:1.7,marginBottom:12}}>
+                            釋出 NT$ {mtgResult.releasable.toLocaleString()} 整筆投入，{mtgResult.yrs} 年複利不動。總貸款重新攤還，到期無需另還本金。
+                          </div>
+                          {[
+                            ["原本月供",`NT$ ${(mtgResult.origMonthly||0).toLocaleString()}/月`],
+                            ["再融資後新月供（"+mtgResult.totalLoan.toLocaleString()+" 重新攤還）",`NT$ ${mtgResult.newTotalMonthly.toLocaleString()}/月`],
+                          ].map(([l,v])=>(
+                            <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(42,138,90,.1)"}}>
+                              <div style={{fontSize:13,color:"#5a6860"}}>{l}</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:"#2c1e0f"}}>{v}</div>
+                            </div>
+                          ))}
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0 0"}}>
+                            <div style={{fontSize:13,color:"#5a6860",fontWeight:600}}>每月多付</div>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:15,fontWeight:700,color:mtgResult.monthlyDiff>0?"#b05060":"#1a6e42"}}>
+                              {mtgResult.monthlyDiff>0?"+":""} NT$ {mtgResult.monthlyDiff.toLocaleString()}/月
+                            </div>
+                          </div>
+
+                          <div style={{marginTop:12,padding:"12px 14px",background:"rgba(42,138,90,.08)",borderRadius:10}}>
+                            <div style={{fontSize:12,color:"#4a6858",marginBottom:8}}>{mtgResult.yrs} 年到期成果（無需另還本金）</div>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <div style={{fontSize:14,color:"#1a6e42",fontWeight:700}}>帳上淨賺資產</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:22,fontWeight:700,color:"#1a6e42"}}>NT$ {mtgResult.futureValue.toLocaleString()}</div>
+                            </div>
+                            <div style={{fontSize:11,color:"#4a6858",marginTop:4}}>
+                              NT$ {mtgResult.releasable.toLocaleString()} × (1 + {mtgForm.targetRate}%)^{mtgResult.yrs} 年複利
+                            </div>
+                          </div>
+                          <div style={{marginTop:10,fontSize:12,color:"#4a6858",lineHeight:1.75,padding:"10px 12px",background:"rgba(255,252,245,.6)",borderRadius:8}}>
+                            💡 每月多付 NT$ {mtgResult.monthlyDiff.toLocaleString()}，{mtgResult.yrs} 年後房子還完，帳上多出 <b style={{color:"#1a6e42"}}>NT$ {mtgResult.futureValue.toLocaleString()}</b> 純資產。
+                          </div>
+                        </div>
+
+                        {/* 方案二：只繳息月配補貼 */}
+                        <div style={{margin:"8px 0 0",padding:"16px",background:"rgba(154,110,32,.06)",border:"1px solid rgba(154,110,32,.2)",borderRadius:14}}>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"#8a5e18",textTransform:"uppercase",marginBottom:6,fontWeight:700}}>方案二：只繳息・現金流補貼型</div>
+                          <div style={{fontSize:12,color:"#7a6040",lineHeight:1.7,marginBottom:12}}>
+                            釋出資金只繳 NT$ {mtgResult.releasable.toLocaleString()} 的月息，活化收益補貼，本金到期一次還清。
+                          </div>
+                          {[
+                            ["原本月供",`NT$ ${(mtgResult.origMonthly||0).toLocaleString()}/月`],
+                            ["＋ 新增再融資月息",`NT$ ${mtgResult.interestOnly.toLocaleString()}/月`],
+                            ["整體月付合計",`NT$ ${mtgResult.totalMonthlyInterest.toLocaleString()}/月`],
+                            ["－ 活化每月收益補貼",`- NT$ ${mtgResult.monthlyReturn.toLocaleString()}/月`],
+                          ].map(([l,v])=>(
+                            <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(154,110,32,.1)"}}>
+                              <div style={{fontSize:13,color:"#6b5040"}}>{l}</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:"#2c1e0f"}}>{v}</div>
+                            </div>
+                          ))}
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,padding:"10px 12px",background:"rgba(154,110,32,.1)",borderRadius:8}}>
+                            <div style={{fontSize:14,color:"#8a5e18",fontWeight:700}}>每月實際自付</div>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:20,fontWeight:700,color:"#8a5e18"}}>NT$ {Math.max(0,mtgResult.afterSubsidyInterest).toLocaleString()}</div>
+                          </div>
+                          {mtgResult.netAnnualInterest>0&&(
+                            <div style={{marginTop:8,padding:"10px 12px",background:"rgba(154,110,32,.08)",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                              <div style={{fontSize:12,color:"#7a6040"}}>活化收益扣利息，每月倒賺</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:15,fontWeight:700,color:"#8a5e18"}}>+NT$ {Math.round(mtgResult.netAnnualInterest/12).toLocaleString()}</div>
+                            </div>
+                          )}
+                          <div style={{marginTop:10,fontSize:12,color:"#6b5040",lineHeight:1.75,padding:"10px 12px",background:"rgba(255,252,245,.6)",borderRadius:8}}>
+                            💡 本金 NT$ {mtgResult.releasable.toLocaleString()} 到期還清，<b style={{color:"#8a5e18"}}>主動權在你手上</b>。市場好繼續滾，市場差隨時退場。
+                          </div>
+                        </div>
+
+                        <div className="calc-note" style={{marginTop:12,background:"rgba(154,110,32,.06)",color:"#7a5020",fontSize:12,lineHeight:1.7}}>
+                          以上試算僅供參考，實際方案請諮詢凱特顧問，依個人財務與稅務狀況量身規劃。
+                        </div>
                       </div>
                     )}
                   </>
@@ -1653,8 +2289,8 @@ export default function App(){
                     <div className="calc-card">
                       <div className="calc-title">🏖️ 退休金試算</div>
                       <div className="calc-desc">計算退休時可累積的總資產，並估算每月可提領金額是否足夠退休生活。</div>
-                      {[["目前年齡","currentAge","例如：40"],["預計退休年齡","retireAge","例如：65"],["目前已累積退休金 (TWD)","currentSavings","例如：3000000"],["每月定期儲蓄 (TWD)","monthlyContrib","例如：30000"],["預估年化報酬率 (%)","expectedReturn","例如：5"],["退休後每月需求 (TWD)","monthlyExpense","例如：80000"]].map(([lb,k,ph])=>(
-                        <div key={k}><div className="calc-lbl">{lb}</div><input className="calc-inp" type="number" placeholder={ph} value={retForm[k]} onChange={e=>setRetForm(p=>({...p,[k]:e.target.value}))}/></div>
+                      {[["目前年齡","currentAge","例如：40"],["預計退休年齡","retireAge","例如：65"],["目前已累積退休金 (TWD)","currentSavings","例如：3000000"],["每月定期儲蓄 (TWD)","monthlyContrib","例如：30000"],["預估年化報酬率 (%)","expectedReturn","例如：5"],["退休後每月需求 (TWD)","monthlyExpense","例如：80000"]].map(([lbl,k,ph])=>(
+                        <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={retForm[k]} onChange={e=>setRetForm(p=>({...p,[k]:e.target.value}))}/></div>
                       ))}
                       <button className="calc-btn" onClick={calcRetirement}>試算退休目標 →</button>
                     </div>
@@ -1667,75 +2303,537 @@ export default function App(){
                             <div className="calc-res-val" style={i===3?{color:retResult.feasible?"var(--green)":"var(--red)"}:{}}>{v}</div>
                           </div>
                         ))}
-                        <div className="calc-note" style={{background:retResult.feasible?"var(--green-dim)":"var(--rose-dim)",color:retResult.feasible?"var(--green)":"var(--rose)"}}>{retResult.feasible?`按目前配置，退休後每月可提領 NT$ ${retResult.monthly.toLocaleString()}，高於目標 ${retResult.gap.toLocaleString()} 元。`:`每月仍有 NT$ ${retResult.shortfall.toLocaleString()} 缺口，建議增加儲蓄或以分紅保單補足退休金。`}</div>
+                        <div className="calc-note" style={{background:retResult.feasible?"var(--green-dim)":"var(--rose-dim)",color:retResult.feasible?"var(--green)":"var(--rose)"}}>{retResult.feasible?`按目前配置，退休後每月可提領 NT$ ${retResult.monthly.toLocaleString()}，高於目標 ${retResult.gap.toLocaleString()} 元。`:`每月仍有 NT$ ${retResult.shortfall.toLocaleString()} 缺口，建議增加儲蓄或透過投資商品補足退休金。`}</div>
                       </div>
                     )}
                   </>
                 )}
+
+                {/* 複利計算機 */}
+                {calcMode==="compound"&&(
+                  <>
+                    <div className="calc-card">
+                      <div className="calc-title">📈 複利計算機</div>
+                      <div className="calc-desc">計算整筆投入或定期定額的長期複利效果。</div>
+                      {[["本金 (TWD)","principal","例如：1000000"],["年化報酬率 (%)","rate","例如：6"],["投資年期","years","例如：20"],["每月定期加碼 (選填)","monthly","例如：10000"]].map(([lbl,k,ph])=>(
+                        <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={compForm[k]} onChange={e=>setCompForm(p=>({...p,[k]:e.target.value}))}/></div>
+                      ))}
+                      <button className="calc-btn" onClick={calcCompound}>計算複利效果 →</button>
+                    </div>
+                    {compResult&&(
+                      <div className="calc-result" style={{border:"1px solid rgba(42,138,90,.25)"}}>
+                        <div className="calc-res-hd" style={{color:"#1a6e42"}}>✓ {compResult.years} 年後</div>
+                        {[["本金複利終值","NT$ "+compResult.fvLump.toLocaleString()],["定期加碼累積","NT$ "+compResult.fvMonthly.toLocaleString()],["總資產","NT$ "+compResult.total.toLocaleString()],["投資獲利","NT$ "+compResult.gain.toLocaleString()]].map(([l,v],i)=>(
+                          <div className="calc-res-row" key={i}>
+                            <div className="calc-res-lbl">{l}</div>
+                            <div className="calc-res-val" style={i===3?{color:"#1a6e42",fontSize:18}:{}}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* 遺產稅試算 */}
+                {calcMode==="estate"&&(
+                  <>
+                    <div className="calc-card">
+                      <div className="calc-title">📋 遺產稅試算（台灣 2025）</div>
+                      <div className="calc-desc">免稅額 1,333 萬，課稅級距 5,621 萬以下 10%、5,621 萬～1.12 億 15%、超過 20%。台灣壽險身故保險金不計入遺產總額。</div>
+                      <div className="calc-lbl">遺產總額（含所有資產，TWD）</div>
+                      <input className="calc-inp" type="number" placeholder="例如：50000000" value={estateForm.totalAsset} onChange={e=>setEstateForm(p=>({...p,totalAsset:e.target.value}))}/>
+                      <div className="calc-lbl">台灣壽險身故保險金（TWD）</div>
+                      <div style={{fontSize:12,color:"var(--md)",marginBottom:6}}>符合條件者不計入遺產，但 114 年度免稅上限為 3,740 萬，超過部分需計入個人基本所得額</div>
+                      <input className="calc-inp" type="number" placeholder="例如：10000000（無則填 0）" value={estateForm.lifeInsurance} onChange={e=>setEstateForm(p=>({...p,lifeInsurance:e.target.value}))}/>
+                      <div className="calc-lbl">配偶</div>
+                      <div style={{display:"flex",gap:8}}>
+                        {[["有","true"],["無","false"]].map(([lbl,v])=>(
+                          <div key={v} onClick={()=>setEstateForm(p=>({...p,spouse:v==="true"}))} style={{flex:1,padding:"10px",textAlign:"center",borderRadius:10,border:`1px solid ${String(estateForm.spouse)===v?"rgba(154,110,32,.4)":"var(--bl)"}`,background:String(estateForm.spouse)===v?"rgba(154,110,32,.1)":"transparent",fontFamily:"'Cinzel',serif",fontSize:11,color:String(estateForm.spouse)===v?"#8a5e18":"var(--md)",cursor:"pointer"}}>{lbl}</div>
+                        ))}
+                      </div>
+                      {[["子女人數","children","例如：2"],["父母人數","parents","例如：0"],["喪葬費用（TWD）","funeralExp","預設 138 萬"]].map(([lbl,k,ph])=>(
+                        <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={estateForm[k]} onChange={e=>setEstateForm(p=>({...p,[k]:e.target.value}))}/></div>
+                      ))}
+                      <div className="calc-lbl">未償債務（TWD，需有確實證明）</div>
+                      <input className="calc-inp" type="number" placeholder="例如：5000000（無則填 0）" value={estateForm.debt} onChange={e=>setEstateForm(p=>({...p,debt:e.target.value}))}/>
+                      <div className="calc-lbl">重度身心障礙繼承人人數（每人加扣 693 萬）</div>
+                      <input className="calc-inp" type="number" placeholder="0" value={estateForm.disabledCount} onChange={e=>setEstateForm(p=>({...p,disabledCount:e.target.value}))}/>
+                      <button className="calc-btn" onClick={calcEstate}>試算遺產稅 →</button>
+                    </div>
+                    {estateResult&&(
+                      <div className="calc-result" style={{border:"1px solid rgba(176,80,96,.25)"}}>
+                        <div className="calc-res-hd" style={{color:"#b05060"}}>⚠ 遺產稅試算結果</div>
+                        {[
+                          ["遺產總額（含保險）",`NT$ ${estateResult.grossAsset.toLocaleString()}`],
+                          ...(estateResult.lifeIns>0?[["壽險身故保險金（不計入遺產）",`- NT$ ${estateResult.lifeIns.toLocaleString()}`]]:[]),
+                          ["課稅遺產總額",`NT$ ${estateResult.asset.toLocaleString()}`],
+                          ["免稅額",`- NT$ 13,330,000`],
+                          ...(estateResult.spouseExempt>0?[["配偶扣除額",`- NT$ ${estateResult.spouseExempt.toLocaleString()}`]]:[]),
+                          ...(estateResult.childExempt>0?[["子女扣除額",`- NT$ ${estateResult.childExempt.toLocaleString()}`]]:[]),
+                          ...(estateResult.parentExempt>0?[["父母扣除額",`- NT$ ${estateResult.parentExempt.toLocaleString()}`]]:[]),
+                          ["喪葬費",`- NT$ ${estateResult.funeral.toLocaleString()}`],
+                          ...(estateResult.debt>0?[["未償債務",`- NT$ ${estateResult.debt.toLocaleString()}`]]:[]),
+                          ...(estateResult.disabledExempt>0?[["身心障礙加扣",`- NT$ ${estateResult.disabledExempt.toLocaleString()}`]]:[]),
+                          ["課稅遺產淨額",`NT$ ${estateResult.taxBase.toLocaleString()}`],
+                          ["適用稅率",`${estateResult.rate}%`],
+                        ].map(([l,v],i)=>(
+                          <div className="calc-res-row" key={i} style={{opacity:v.startsWith("-")?0.75:1}}>
+                            <div className="calc-res-lbl" style={{color:v.startsWith("-")?"var(--green)":"inherit"}}>{l}</div>
+                            <div className="calc-res-val" style={{color:v.startsWith("-")?"var(--green)":"inherit"}}>{v}</div>
+                          </div>
+                        ))}
+                        {estateResult.lifeInsOver>0&&(
+                          <div style={{marginTop:8,padding:"10px 14px",background:"rgba(176,80,96,.06)",borderRadius:10,border:"1px solid rgba(176,80,96,.2)",fontSize:12,color:"#b05060",lineHeight:1.7}}>
+                            ⚠ 壽險保險金超過 3,740 萬免稅上限，超出的 <strong>NT$ {estateResult.lifeInsOver.toLocaleString()}</strong> 需納入個人基本所得額，依最低稅負制另行計算。
+                          </div>
+                        )}
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,padding:"12px 14px",background:"rgba(176,80,96,.08)",borderRadius:10,border:"1px solid rgba(176,80,96,.2)"}}>
+                          <div style={{fontSize:14,color:"#b05060",fontWeight:700}}>應繳遺產稅</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:22,fontWeight:700,color:"#b05060"}}>NT$ {estateResult.tax.toLocaleString()}</div>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",marginTop:8}}>
+                          <div style={{fontSize:13,color:"var(--md)"}}>稅後家族可繼承</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:700,color:"#1a6e42"}}>NT$ {estateResult.afterTax.toLocaleString()}</div>
+                        </div>
+                        <div className="calc-note" style={{background:"rgba(154,110,32,.08)",color:"#8a5e18"}}>透過境外保險規劃可有效降低遺產稅。壽險不計入遺產需留意實質課稅原則，建議諮詢凱特顧問。</div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* 個人綜所稅試算 */}
+                {calcMode==="incometax"&&(()=>{
+                  // 114年度（115年5月申報）課稅級距
+                  const brackets=[
+                    {max:590000,rate:0.05,diff:0},
+                    {max:1330000,rate:0.12,diff:41300},
+                    {max:2660000,rate:0.20,diff:147700},
+                    {max:4980000,rate:0.30,diff:413700},
+                    {max:Infinity,rate:0.40,diff:911700},
+                  ];
+                  const grossIncome=Number(itaxForm.income)||0;
+                  const headCount=1+(itaxForm.spouse?1:0)+Number(itaxForm.children)+Number(itaxForm.parents);
+                  const exempt=97000*headCount; // 免稅額每人9.7萬
+                  const stdDeduct=itaxForm.spouse?262000:131000; // 標準扣除額
+                  const salaryDeduct=itaxForm.salary?Math.min(218000,grossIncome):0; // 薪資所得特別扣除額21.8萬
+                  // 幼兒學前：第1名15萬，第2名以上22.5萬
+                  const youngKids=Number(itaxForm.youngKids)||0;
+                  const childDeduct=youngKids>=1?150000+(Math.max(0,youngKids-1)*225000):0;
+                  // 長期照顧：每人18萬
+                  const ltcDeduct=(Number(itaxForm.ltc)||0)*180000;
+                  // 房租支出：18萬上限
+                  const rentDeduct=itaxForm.rent?180000:0;
+                  const totalSpecialDeduct=salaryDeduct+childDeduct+ltcDeduct+rentDeduct;
+                  const netIncome=Math.max(0,grossIncome-exempt-stdDeduct-totalSpecialDeduct);
+                  const bracket=brackets.find(b=>netIncome<=b.max)||brackets[brackets.length-1];
+                  const tax=Math.max(0,Math.round(netIncome*bracket.rate-bracket.diff));
+                  const effRate=grossIncome>0?(tax/grossIncome*100).toFixed(1):"0";
+                  const checkBox=(key,label)=>(
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,padding:"12px 14px",background:"var(--card2)",borderRadius:10,cursor:"pointer"}} onClick={()=>setItaxForm(p=>({...p,[key]:!p[key]}))}>
+                      <div style={{width:20,height:20,borderRadius:6,border:`1px solid ${itaxForm[key]?"var(--gold)":"var(--bl)"}`,background:itaxForm[key]?"var(--gold)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",flexShrink:0}}>{itaxForm[key]?"✓":""}</div>
+                      <div style={{fontSize:13,color:"var(--td)"}}>{label}</div>
+                    </div>
+                  );
+                  return(
+                  <>
+                    <div className="calc-card">
+                      <div className="calc-title">💼 個人綜所稅試算（114年度・115年5月申報）</div>
+                      <div className="calc-desc">依 114 年度適用數字試算，含幼兒學前、長照、房租等特別扣除額。</div>
+                      <div className="calc-lbl">全年所得總額 (TWD)</div>
+                      <input className="calc-inp" type="number" placeholder="例如：1200000" value={itaxForm.income} onChange={e=>setItaxForm(p=>({...p,income:e.target.value}))}/>
+                      <div className="calc-lbl">申報方式</div>
+                      <div style={{display:"flex",gap:8}}>
+                        {[["單身申報","false"],["與配偶合併","true"]].map(([lbl,v])=>(
+                          <div key={v} onClick={()=>setItaxForm(p=>({...p,spouse:v==="true"}))} style={{flex:1,padding:"10px",textAlign:"center",borderRadius:10,border:`1px solid ${String(itaxForm.spouse)===v?"rgba(154,110,32,.4)":"var(--bl)"}`,background:String(itaxForm.spouse)===v?"rgba(154,110,32,.1)":"transparent",fontFamily:"'Cinzel',serif",fontSize:10,color:String(itaxForm.spouse)===v?"#8a5e18":"var(--md)",cursor:"pointer"}}>{lbl}</div>
+                        ))}
+                      </div>
+                      {[["扶養子女人數（一般）","children","0"],["扶養父母人數","parents","0"]].map(([lbl,k,ph])=>(
+                        <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={itaxForm[k]} onChange={e=>setItaxForm(p=>({...p,[k]:e.target.value}))}/></div>
+                      ))}
+                      {checkBox("salary","有薪資所得（薪資特別扣除額 21.8 萬）")}
+                      {checkBox("rent","有租屋支出（房租特別扣除額上限 18 萬）")}
+                      <div className="calc-lbl" style={{marginTop:14}}>6歲以下幼兒人數（學前特別扣除額）</div>
+                      <div style={{fontSize:12,color:"var(--md)",marginBottom:6}}>第1名 15 萬・第2名以上各 22.5 萬</div>
+                      <input className="calc-inp" type="number" placeholder="0" value={itaxForm.youngKids||""} onChange={e=>setItaxForm(p=>({...p,youngKids:e.target.value}))}/>
+                      <div className="calc-lbl">需長照人數（長期照顧特別扣除額，每人 18 萬）</div>
+                      <input className="calc-inp" type="number" placeholder="0" value={itaxForm.ltc||""} onChange={e=>setItaxForm(p=>({...p,ltc:e.target.value}))}/>
+                    </div>
+                    {grossIncome>0&&(
+                      <div className="calc-result" style={{border:"1px solid rgba(42,94,168,.2)"}}>
+                        <div className="calc-res-hd" style={{color:"#2a5ea8"}}>試算結果（114 年度・115年5月申報）</div>
+                        {[
+                          ["全年所得總額",`NT$ ${grossIncome.toLocaleString()}`],
+                          ["免稅額",`- NT$ ${exempt.toLocaleString()}`],
+                          ["標準扣除額",`- NT$ ${stdDeduct.toLocaleString()}`],
+                          ...(salaryDeduct>0?[["薪資所得特別扣除額",`- NT$ ${salaryDeduct.toLocaleString()}`]]:[]),
+                          ...(childDeduct>0?[["幼兒學前特別扣除額",`- NT$ ${childDeduct.toLocaleString()}`]]:[]),
+                          ...(ltcDeduct>0?[["長期照顧特別扣除額",`- NT$ ${ltcDeduct.toLocaleString()}`]]:[]),
+                          ...(rentDeduct>0?[["房租支出特別扣除額",`- NT$ ${rentDeduct.toLocaleString()}`]]:[]),
+                          ["所得淨額",`NT$ ${netIncome.toLocaleString()}`],
+                          ["適用稅率",`${(bracket.rate*100).toFixed(0)}%`],
+                        ].map(([l,v],i)=>(
+                          <div className="calc-res-row" key={i}>
+                            <div className="calc-res-lbl">{l}</div>
+                            <div className="calc-res-val">{v}</div>
+                          </div>
+                        ))}
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,padding:"12px 14px",background:"rgba(42,94,168,.08)",borderRadius:10,border:"1px solid rgba(42,94,168,.15)"}}>
+                          <div style={{fontSize:14,color:"#2a5ea8",fontWeight:700}}>估算應繳稅額</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:22,fontWeight:700,color:"#2a5ea8"}}>NT$ {tax.toLocaleString()}</div>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",marginTop:8}}>
+                          <div style={{fontSize:13,color:"var(--md)"}}>實際有效稅率</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:700,color:"#2c1e0f"}}>{effRate}%</div>
+                        </div>
+                        <div style={{marginTop:12,padding:"12px 14px",background:"var(--card2)",borderRadius:10}}>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",textTransform:"uppercase",marginBottom:8}}>114年度課稅級距表</div>
+                          {[["59 萬以下","5%",0.05],["59～133 萬","12%",0.12],["133～266 萬","20%",0.20],["266～498 萬","30%",0.30],["498 萬以上","40%",0.40]].map(([range,rate,r],i)=>(
+                            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:i<4?"1px solid rgba(140,110,80,.1)":"none"}}>
+                              <div style={{fontSize:12,color:"#6b5040"}}>{range}</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:700,color:bracket.rate===r?"#2a5ea8":"#2c1e0f"}}>{rate}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="calc-note" style={{background:"rgba(42,94,168,.06)",color:"#2a5ea8",marginTop:10}}>以上僅供參考，實際稅額依個人申報情況及各項列舉扣除額而異。長照扣除額設有排富條款（稅率20%以上者不適用）。</div>
+                      </div>
+                    )}
+                  </>
+                  );
+                })()}
+
+                {/* 房地合一稅 */}
+                {calcMode==="realestate2"&&(()=>{
+                  const sellPrice=Number(reit2Form?.sellPrice)||0;
+                  const buyPrice=Number(reit2Form?.buyPrice)||0;
+                  const cost=Number(reit2Form?.cost)||0;
+                  const holdYears=Number(reit2Form?.holdYears)||0;
+                  const isPersonal=reit2Form?.isPersonal!==false;
+                  const profit=Math.max(0,sellPrice-buyPrice-cost);
+                  // 房地合一稅率（個人）
+                  let rate=0,rateLabel="";
+                  if(isPersonal){
+                    if(holdYears<2){rate=0.45;rateLabel="45%（持有未滿2年）";}
+                    else if(holdYears<5){rate=0.35;rateLabel="35%（持有2～5年）";}
+                    else if(holdYears<10){rate=0.20;rateLabel="20%（持有5～10年）";}
+                    else{rate=0.15;rateLabel="15%（持有10年以上）";}
+                    // 自住優惠：持有且設籍6年以上可減免，最高免稅400萬
+                    if(reit2Form?.selfUse&&holdYears>=6){
+                      const exempt=Math.min(profit,4000000);
+                      const taxable=Math.max(0,profit-exempt);
+                      const tax=Math.round(taxable*0.1);
+                      return(<>
+                        <div className="calc-card">
+                          <div className="calc-title">🏢 房地合一稅試算（2.0）</div>
+                          <div className="calc-desc">2021年7月後交易適用。自住優惠：設籍並持有6年以上，獲利400萬內免稅，超過部分課10%。</div>
+                          {renderReit2Form(reit2Form,setReit2Form)}
+                        </div>
+                        <div className="calc-result" style={{border:"1px solid rgba(42,138,90,.25)"}}>
+                          <div className="calc-res-hd" style={{color:"#1a6e42"}}>✓ 自住優惠適用</div>
+                          {[["售價","NT$ "+sellPrice.toLocaleString()],["取得成本","- NT$ "+buyPrice.toLocaleString()],["改良費用","- NT$ "+cost.toLocaleString()],["獲利","NT$ "+profit.toLocaleString()],["免稅額（400萬上限）","- NT$ "+exempt.toLocaleString()],["課稅所得","NT$ "+taxable.toLocaleString()],["稅率","10%"]].map(([l,v],i)=>(<div className="calc-res-row" key={i}><div className="calc-res-lbl">{l}</div><div className="calc-res-val">{v}</div></div>))}
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,padding:"12px 14px",background:"rgba(42,138,90,.08)",borderRadius:10}}>
+                            <div style={{fontSize:14,color:"#1a6e42",fontWeight:700}}>應繳房地合一稅</div>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:22,fontWeight:700,color:"#1a6e42"}}>NT$ {tax.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      </>);
+                    }
+                  }
+                  // 非自住或公司
+                  if(!isPersonal){
+                    if(holdYears<2){rate=0.45;rateLabel="45%（持有未滿2年）";}
+                    else{rate=0.20;rateLabel="20%（持有2年以上）";}
+                  }
+                  const tax=Math.round(profit*rate);
+                  return(<>
+                    <div className="calc-card">
+                      <div className="calc-title">🏢 房地合一稅試算（2.0）</div>
+                      <div className="calc-desc">2021年7月後交易適用。依持有年數課稅：未滿2年45%、2~5年35%、5~10年20%、10年以上15%。自住6年以上優惠稅率10%。</div>
+                      {renderReit2Form(reit2Form,setReit2Form)}
+                    </div>
+                    {sellPrice>0&&(
+                      <div className="calc-result" style={{border:`1px solid ${profit>0?"rgba(176,80,96,.25)":"rgba(42,138,90,.25)"}`}}>
+                        <div className="calc-res-hd" style={{color:profit>0?"#b05060":"#1a6e42"}}>{profit>0?"⚠ 有獲利需繳稅":"✓ 無獲利免稅"}</div>
+                        {[["成交售價","NT$ "+sellPrice.toLocaleString()],["取得成本","- NT$ "+buyPrice.toLocaleString()],["改良/仲介費用","- NT$ "+cost.toLocaleString()],["課稅獲利","NT$ "+profit.toLocaleString()],["持有年數",holdYears+"年"],["適用稅率",rateLabel]].map(([l,v],i)=>(<div className="calc-res-row" key={i}><div className="calc-res-lbl">{l}</div><div className="calc-res-val">{v}</div></div>))}
+                        {profit>0&&(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,padding:"12px 14px",background:"rgba(176,80,96,.08)",borderRadius:10}}>
+                          <div style={{fontSize:14,color:"#b05060",fontWeight:700}}>應繳房地合一稅</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:22,fontWeight:700,color:"#b05060"}}>NT$ {tax.toLocaleString()}</div>
+                        </div>)}
+                        <div className="calc-note" style={{background:"rgba(154,110,32,.06)",color:"#8a5e18",marginTop:10}}>持有越久稅率越低。善用自住設籍規劃，可大幅降低稅負。</div>
+                      </div>
+                    )}
+                  </>);
+                })()}
+
+                {/* 匯率換算 */}
+                {calcMode==="fx"&&(
+                  <div className="calc-card">
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                      <div className="calc-title" style={{marginBottom:0}}>💱 匯率換算</div>
+                      <button onClick={refreshFxRates} disabled={fxLoading} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:20,border:"1px solid rgba(154,110,32,.3)",background:"rgba(154,110,32,.08)",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1,color:"#8a5e18",cursor:fxLoading?"not-allowed":"pointer",opacity:fxLoading?0.6:1}}>
+                        <span style={{display:"inline-block",animation:fxLoading?"spin 1s linear infinite":"none"}}>↻</span>
+                        {fxLoading?"更新中…":"即時匯率"}
+                      </button>
+                    </div>
+                    <div className="calc-desc">{fxUpdatedAt?`已於今日 ${fxUpdatedAt}`:`參考匯率（點擊「即時匯率」更新）`}</div>
+                    <div className="calc-lbl">金額</div>
+                    <input className="calc-inp" type="number" placeholder="輸入金額" value={fxAmount} onChange={e=>setFxAmount(e.target.value)}/>
+                    <div style={{display:"flex",gap:8,alignItems:"center",marginTop:12}}>
+                      <select className="calc-inp" style={{flex:1}} value={fxFrom} onChange={e=>setFxFrom(e.target.value)}>
+                        {Object.keys(fxRates).map(k=><option key={k} value={k}>{k}</option>)}
+                      </select>
+                      <div style={{fontSize:20,color:"var(--md)",flexShrink:0}}>→</div>
+                      <select className="calc-inp" style={{flex:1}} value={fxTo} onChange={e=>setFxTo(e.target.value)}>
+                        {Object.keys(fxRates).map(k=><option key={k} value={k}>{k}</option>)}
+                      </select>
+                    </div>
+                    {fxAmount&&(
+                      <div style={{marginTop:16,padding:"16px",background:"rgba(154,110,32,.08)",borderRadius:12,textAlign:"center"}}>
+                        <div style={{fontSize:13,color:"var(--md)",marginBottom:6}}>{Number(fxAmount).toLocaleString()} {fxFrom} =</div>
+                        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:28,fontWeight:700,color:"#8a5e18"}}>
+                          {(Number(fxAmount)/fxRates[fxFrom]*fxRates[fxTo]).toLocaleString(undefined,{maximumFractionDigits:2})} {fxTo}
+                        </div>
+                        <div style={{fontSize:11,color:"var(--md)",marginTop:6}}>參考匯率 · 實際以銀行牌告為準</div>
+                      </div>
+                    )}
+                    <div style={{marginTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      {Object.entries(fxRates).filter(([k])=>k!=="USD").map(([k,v])=>(
+                        <div key={k} style={{padding:"10px 12px",background:"var(--card2)",borderRadius:10}}>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",marginBottom:3}}>1 USD</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:700,color:"#2c1e0f"}}>{v} {k}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 72法則 */}
+                {calcMode==="rule72"&&(
+                  <div className="calc-card">
+                    <div className="calc-title">⚡ 72 法則</div>
+                    <div className="calc-desc">資金翻倍所需年數 = 72 ÷ 年化報酬率。快速評估投資效率。</div>
+                    <div className="calc-lbl">年化報酬率 (%)</div>
+                    <input className="calc-inp" type="number" placeholder="例如：6" value={rule72Rate} onChange={e=>setRule72Rate(e.target.value)}/>
+                    {rule72Rate&&Number(rule72Rate)>0&&(
+                      <div style={{marginTop:16}}>
+                        <div style={{padding:"16px",background:"rgba(154,110,32,.08)",borderRadius:12,textAlign:"center",marginBottom:12}}>
+                          <div style={{fontSize:13,color:"var(--md)",marginBottom:6}}>報酬率 {rule72Rate}%，資金翻倍需要</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:36,fontWeight:700,color:"#8a5e18"}}>{(72/Number(rule72Rate)).toFixed(1)} 年</div>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                          {[3,4,5,6,7,8,10,12].map(r=>(
+                            <div key={r} style={{padding:"10px 12px",background:Number(rule72Rate)===r?"rgba(154,110,32,.12)":"var(--card2)",border:`1px solid ${Number(rule72Rate)===r?"rgba(154,110,32,.3)":"var(--bl)"}`,borderRadius:10,cursor:"pointer"}} onClick={()=>setRule72Rate(String(r))}>
+                              <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",marginBottom:3}}>{r}% 報酬率</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:15,fontWeight:700,color:"#2c1e0f"}}>{(72/r).toFixed(1)} 年翻倍</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 通膨侵蝕 */}
+                {calcMode==="inflation"&&(
+                  <div className="calc-card">
+                    <div className="calc-title">📉 通膨侵蝕計算</div>
+                    <div className="calc-desc">計算一筆錢在通膨下的實際購買力，了解不投資的隱形損失。</div>
+                    {[["現在的金額 (TWD)","amount","例如：1000000"],["年通膨率 (%)","rate","例如：2"],["年數","years","例如：20"]].map(([lbl,k,ph])=>(
+                      <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={inflForm[k]} onChange={e=>setInflForm(p=>({...p,[k]:e.target.value}))}/></div>
+                    ))}
+                    {inflForm.amount&&inflForm.years&&(
+                      <div style={{marginTop:16,padding:"16px",background:"rgba(176,80,96,.06)",borderRadius:12,border:"1px solid rgba(176,80,96,.2)"}}>
+                        <div style={{fontSize:13,color:"#6b5040",marginBottom:8}}>現在 NT$ {Number(inflForm.amount).toLocaleString()} 的購買力，{inflForm.years} 年後只剩</div>
+                        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:28,fontWeight:700,color:"#b05060",marginBottom:8}}>
+                          NT$ {Math.round(Number(inflForm.amount)/Math.pow(1+Number(inflForm.rate)/100,Number(inflForm.years))).toLocaleString()}
+                        </div>
+                        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:"#b05060"}}>
+                          縮水 NT$ {Math.round(Number(inflForm.amount)-Number(inflForm.amount)/Math.pow(1+Number(inflForm.rate)/100,Number(inflForm.years))).toLocaleString()}
+                        </div>
+                        <div style={{marginTop:10,fontSize:12,color:"#6b5040",lineHeight:1.7,padding:"10px",background:"rgba(255,252,245,.6)",borderRadius:8}}>
+                          💡 不投資，通膨每年默默侵蝕你的財富。透過年化 {Number(inflForm.rate)+2}% 以上的配置，才能真正保值。
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 回本年試算 */}
+                {calcMode==="irr"&&(
+                  <>
+                    <div className="calc-card">
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                        <div className="calc-title" style={{marginBottom:0}}>📊 IRR 內部報酬率試算</div>
+                        <button onClick={()=>{setIrrForm({mode:"insurance",payYears:"2",annualPremium:"25000",rows:[{year:"3",value:"42000"},{year:"5",value:"55000"},{year:"10",value:"82000"},{year:"15",value:"124000"},{year:"20",value:"180000"}]});setIrrResult(null);}} style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1,color:"#9a6e20",background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.2)",borderRadius:8,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap"}}>填入範例</button>
+                      </div>
+                      <div className="calc-desc">輸入保單繳費條件與各年現金價值，計算真實年化報酬率（IRR）。</div>
+                      <div className="calc-lbl">繳費年期（年）</div>
+                      <input className="calc-inp" type="number" placeholder="例如：2" value={irrForm.payYears} onChange={e=>setIrrForm(p=>({...p,payYears:e.target.value}))}/>
+                      <div className="calc-lbl">年繳保費（USD）</div>
+                      <input className="calc-inp" type="number" placeholder="例如：25000" value={irrForm.annualPremium} onChange={e=>setIrrForm(p=>({...p,annualPremium:e.target.value}))}/>
+
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:16,marginBottom:8}}>
+                        <div className="calc-lbl" style={{marginTop:0,marginBottom:0}}>各年現金價值（USD）</div>
+                        <button onClick={()=>setIrrForm(p=>({...p,rows:[...p.rows,{year:"",value:""}]}))} style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#8a5e18",background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.2)",borderRadius:8,padding:"5px 12px",cursor:"pointer"}}>＋ 新增</button>
+                      </div>
+                      <div style={{fontSize:12,color:"var(--md)",marginBottom:10,lineHeight:1.6}}>填入你想比較的年份與當年的保單現金價值，可跳年填入（例如只填第5、10、20年）。</div>
+                      <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr auto",gap:"6px 8px",alignItems:"center",marginBottom:8}}>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",letterSpacing:1}}>  </div>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",letterSpacing:1}}>第幾年</div>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",letterSpacing:1}}>現金價值 (USD)</div>
+                        <div/>
+                        {irrForm.rows.map((row,i)=>(
+                          <>
+                            <div key={`n${i}`} style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"var(--md)",textAlign:"center"}}>{i+1}</div>
+                            <input key={`y${i}`} className="calc-inp" type="number" placeholder="例：5" value={row.year} onChange={e=>setIrrForm(p=>({...p,rows:p.rows.map((r,j)=>j===i?{...r,year:e.target.value}:r)}))} style={{padding:"10px 12px",fontSize:14}}/>
+                            <input key={`v${i}`} className="calc-inp" type="number" placeholder="例：55000" value={row.value} onChange={e=>setIrrForm(p=>({...p,rows:p.rows.map((r,j)=>j===i?{...r,value:e.target.value}:r)}))} style={{padding:"10px 12px",fontSize:14}}/>
+                            <button key={`d${i}`} onClick={()=>setIrrForm(p=>({...p,rows:p.rows.filter((_,j)=>j!==i)}))} style={{width:28,height:28,borderRadius:8,border:"1px solid rgba(176,80,96,.2)",background:"transparent",color:"#b05060",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                          </>
+                        ))}
+                      </div>
+                      <button className="calc-btn" onClick={calcIRR} style={{marginTop:8}}>計算 IRR →</button>
+                    </div>
+
+                    {irrResult&&(
+                      <div className="calc-result" style={{border:`1px solid ${Number(irrResult.pct)>=5?"rgba(42,138,90,.25)":Number(irrResult.pct)>=3?"rgba(154,110,32,.25)":"rgba(176,80,96,.25)"}`}}>
+                        <div style={{textAlign:"center",padding:"16px 0 12px"}}>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:3,color:"var(--md)",textTransform:"uppercase",marginBottom:8}}>年化內部報酬率 IRR</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:42,fontWeight:700,color:Number(irrResult.pct)>=5?"#1a6e42":Number(irrResult.pct)>=3?"#8a5e18":"#b05060"}}>{irrResult.pct}%</div>
+                          <div style={{fontSize:12,color:"var(--md)",marginTop:6}}>{Number(irrResult.pct)>=6?"優秀 — 高於一般定存與債券":Number(irrResult.pct)>=4?"良好 — 具競爭力的長期報酬":Number(irrResult.pct)>=2?"普通 — 略優於通膨":"偏低 — 建議重新評估配置"}</div>
+                        </div>
+                        <div style={{height:1,background:"var(--bl)",margin:"0 0 12px"}}/>
+                        <div style={{marginBottom:12}}>
+                          {[
+                            ["總投入",`USD ${irrResult.totalIn.toLocaleString()}`],
+                            ["最終現金價值",`USD ${(irrResult.cfs[irrResult.cfs.length-1]||0).toLocaleString()}`],
+                          ].map(([l,v])=>(
+                            <div className="calc-res-row" key={l}><div className="calc-res-lbl">{l}</div><div className="calc-res-val">{v}</div></div>
+                          ))}
+                        </div>
+                        <div className="calc-note" style={{background:"rgba(154,110,32,.08)",color:"#8a5e18",marginTop:12}}>IRR 為稅前估算值，實際報酬受時間、匯率及保單條款影響。建議諮詢凱特顧問進行完整試算。</div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {calcMode==="gift"&&(
+                  <>
+                    <div className="calc-card">
+                      <div className="calc-title">🎁 贈與稅試算（2025）</div>
+                      <div className="calc-desc">每位贈與人每年免稅額 244 萬。課稅級距：2,811 萬以下 10%、2,811～5,621 萬 15%、超過 5,621 萬 20%。</div>
+                      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+                        <button onClick={()=>{setGiftForm({totalGift:"5000000",donors:"2",wedding:false,spouseGift:false});setGiftResult(null);}} style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1,color:"#9a6e20",background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.2)",borderRadius:8,padding:"5px 12px",cursor:"pointer"}}>填入範例數字</button>
+                      </div>
+                      <div className="calc-lbl">本年度贈與總額（TWD）</div>
+                      <div style={{fontSize:12,color:"var(--md)",marginBottom:6}}>填入贈與人本年度對所有受贈人的贈與合計</div>
+                      <input className="calc-inp" type="number" placeholder="例如：5000000" value={giftForm.totalGift} onChange={e=>setGiftForm(p=>({...p,totalGift:e.target.value}))}/>
+                      <div className="calc-lbl">贈與人人數</div>
+                      <div style={{fontSize:12,color:"var(--md)",marginBottom:6}}>免稅額以「每位贈與人」計算，夫妻各有 244 萬額度</div>
+                      <div style={{display:"flex",gap:8}}>
+                        {["1","2"].map(v=>(
+                          <div key={v} onClick={()=>setGiftForm(p=>({...p,donors:v}))} style={{flex:1,padding:"10px",textAlign:"center",borderRadius:10,border:`1px solid ${giftForm.donors===v?"rgba(154,110,32,.4)":"var(--bl)"}`,background:giftForm.donors===v?"rgba(154,110,32,.1)":"transparent",fontFamily:"'Cinzel',serif",fontSize:11,color:giftForm.donors===v?"#8a5e18":"var(--md)",cursor:"pointer"}}>{v==="1"?"1 人（單獨贈與）":"2 人（夫妻共同贈與）"}</div>
+                        ))}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginTop:12,padding:"12px 14px",background:"var(--card2)",borderRadius:10,cursor:"pointer"}} onClick={()=>setGiftForm(p=>({...p,wedding:!p.wedding}))}>
+                        <div style={{width:20,height:20,borderRadius:6,border:`1px solid ${giftForm.wedding?"var(--gold)":"var(--bl)"}`,background:giftForm.wedding?"var(--gold)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",flexShrink:0}}>{giftForm.wedding?"✓":""}</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,color:"var(--td)"}}>子女婚嫁加碼免稅（每位贈與人 +100 萬）</div>
+                          <div style={{fontSize:11,color:"var(--md)",marginTop:2}}>婚嫁登記前後 6 個月內贈與適用</div>
+                        </div>
+                      </div>
+                      <button className="calc-btn" onClick={()=>{
+                        const total=Number(giftForm.totalGift)||0;
+                        const donors=Number(giftForm.donors)||1;
+                        const weddingBonus=giftForm.wedding?1000000*donors:0;
+                        const exempt=2440000*donors+weddingBonus;
+                        const taxBase=Math.max(0,total-exempt);
+                        const t1=28110000,t2=56210000;
+                        let tax=0;
+                        if(taxBase<=t1) tax=Math.round(taxBase*0.1);
+                        else if(taxBase<=t2) tax=Math.round(t1*0.1+(taxBase-t1)*0.15);
+                        else tax=Math.round(t1*0.1+(t2-t1)*0.15+(taxBase-t2)*0.2);
+                        const rate=taxBase<=t1?10:taxBase<=t2?15:20;
+                        const yearsToZeroTax=total>exempt&&exempt>0?Math.ceil(total/exempt):1;
+                        setGiftResult({total,exempt,taxBase,tax,rate,afterTax:total-tax,weddingBonus,donors,yearsToZeroTax,annualExempt:2440000*donors});
+                      }}>試算贈與稅 →</button>
+                    </div>
+                    {giftResult&&(
+                      <div className="calc-result" style={{border:"1px solid rgba(154,110,32,.25)"}}>
+                        <div className="calc-res-hd" style={{color:"#8a5e18"}}>贈與稅試算結果</div>
+                        {[
+                          ["贈與總額",`NT$ ${giftResult.total.toLocaleString()}`],
+                          ["年度免稅額",`- NT$ ${(2440000*giftResult.donors).toLocaleString()}`],
+                          ...(giftResult.weddingBonus>0?[["婚嫁加碼免稅",`- NT$ ${giftResult.weddingBonus.toLocaleString()}`]]:[]),
+                          ["課稅贈與淨額",`NT$ ${giftResult.taxBase.toLocaleString()}`],
+                          ["適用稅率",`${giftResult.rate}%`],
+                        ].map(([l,v],i)=>(
+                          <div className="calc-res-row" key={i} style={{opacity:v.startsWith("-")?0.75:1}}>
+                            <div className="calc-res-lbl" style={{color:v.startsWith("-")?"var(--green)":"inherit"}}>{l}</div>
+                            <div className="calc-res-val" style={{color:v.startsWith("-")?"var(--green)":"inherit"}}>{v}</div>
+                          </div>
+                        ))}
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,padding:"12px 14px",background:giftResult.tax===0?"rgba(42,138,90,.08)":"rgba(154,110,32,.08)",borderRadius:10,border:`1px solid ${giftResult.tax===0?"rgba(42,138,90,.2)":"rgba(154,110,32,.2)"}`}}>
+                          <div style={{fontSize:14,color:giftResult.tax===0?"#1a6e42":"#8a5e18",fontWeight:700}}>應繳贈與稅</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:22,fontWeight:700,color:giftResult.tax===0?"#1a6e42":"#8a5e18"}}>NT$ {giftResult.tax.toLocaleString()}</div>
+                        </div>
+                        {giftResult.tax===0?(
+                          <div className="calc-note" style={{background:"rgba(42,138,90,.06)",color:"#1a6e42",marginTop:10}}>✓ 未超過免稅額，本次贈與免徵贈與稅。</div>
+                        ):(
+                          <>
+                            <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",marginTop:8}}>
+                              <div style={{fontSize:13,color:"var(--md)"}}>受贈人實得</div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:700,color:"#1a6e42"}}>NT$ {giftResult.afterTax.toLocaleString()}</div>
+                            </div>
+                            <div style={{marginTop:10,padding:"12px 14px",background:"rgba(154,110,32,.06)",borderRadius:10,border:"1px solid rgba(154,110,32,.15)"}}>
+                              <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",textTransform:"uppercase",marginBottom:8}}>節稅規劃建議</div>
+                              <div style={{fontSize:12,color:"var(--td)",lineHeight:1.8}}>
+                                若改為每年分批贈與，每位贈與人年度免稅額 NT$ {giftResult.annualExempt.toLocaleString()}，本次贈與金額約需 <strong>{giftResult.yearsToZeroTax} 年</strong>分批可達免稅。
+                              </div>
+                            </div>
+                            <div className="calc-note" style={{background:"rgba(154,110,32,.08)",color:"#8a5e18",marginTop:10}}>超額贈與繳 10% 贈與稅，可省下未來 20% 遺產稅，合理規劃可達節稅效果。</div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {calcMode==="breakeven"&&(
+                  <>
+                    <div className="calc-card">
+                      <div className="calc-title">🔄 回本年試算</div>
+                      <div className="calc-desc">試算保單或投資在不同報酬率下的預估回本年份。</div>
+                      {[["年繳保費/投入金額 (TWD)","premium","例如：25000"],["繳費年期","payYears","例如：2"],["預估年化報酬率 (%)","targetRate","例如：6"]].map(([lbl,k,ph])=>(
+                        <div key={k}><div className="calc-lbl">{lbl}</div><input className="calc-inp" type="number" placeholder={ph} value={breakevenForm[k]} onChange={e=>setBreakevenForm(p=>({...p,[k]:e.target.value}))}/></div>
+                      ))}
+                      <button className="calc-btn" onClick={calcBreakeven}>試算回本年 →</button>
+                    </div>
+                    {breakevenResult&&(
+                      <div className="calc-result" style={{border:"1px solid rgba(42,138,90,.25)"}}>
+                        <div className="calc-res-hd" style={{color:"#1a6e42"}}>預估第 {breakevenResult.breakYr} 年回本</div>
+                        <div className="calc-res-row">
+                          <div className="calc-res-lbl">總投入成本</div>
+                          <div className="calc-res-val">NT$ {breakevenResult.totalCost.toLocaleString()}</div>
+                        </div>
+                        <div style={{marginTop:12}}>
+                          {breakevenResult.projections.map((p,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                              <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"var(--md)",width:36,flexShrink:0}}>第{p.yr}年</div>
+                              <div style={{flex:1,height:6,background:"var(--card2)",borderRadius:3,overflow:"hidden"}}>
+                                <div style={{height:"100%",width:`${Math.min(100,(p.cv/breakevenResult.totalCost)*100)}%`,background:p.cv>=breakevenResult.totalCost?"#1a6e42":"rgba(154,110,32,.5)",borderRadius:3,transition:"width .3s"}}/>
+                              </div>
+                              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:p.cv>=breakevenResult.totalCost?"#1a6e42":"var(--md)",width:80,textAlign:"right",flexShrink:0}}>{Math.round(p.cv/breakevenResult.totalCost*100)}%</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
               </div>
-            )}
           </div>
         )}
 
-        {/* ════ EXPLORE (市場) ════ */}
-        {tab==="explore"&&(
-          <div>
-            <div className="ph">
-              <div className="ph-en">Market Explorer</div>
-              <div className="ph-t">市場探索</div>
-            </div>
-            <div className="sub-tabs">
-              {[{id:"news",label:"📰 財經新聞"},{id:"stocks",label:"📈 個股追蹤"}].map(t=>(
-                <div key={t.id} className={`st ${exploreSub===t.id?"active":""}`} onClick={()=>setExploreSub(t.id)}>{t.label}</div>
-              ))}
-            </div>
-            {exploreSub==="news"&&(
-              <div style={{paddingTop:12}}>
-                {newsLoading?(
-                  <div style={{margin:"0 16px 14px",padding:"20px",background:"var(--card)",borderRadius:16,display:"flex",alignItems:"center",gap:12}}>
-                    <div className="spin" style={{width:24,height:24,borderWidth:"2px"}}/>
-                    <div style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"var(--md)"}}>載入即時新聞…</div>
-                  </div>
-                ):(()=>{const newsToShow=liveNews.length>0?liveNews:ALL_NEWS;return(<>
-                  <div className="news-feat" onClick={()=>setScreen({type:"news",data:newsToShow[0]})}>
-                    <div className="news-feat-img" style={{background:"linear-gradient(135deg,#0a1828,#1a2a0a)"}}>{newsToShow[0]?.emoji||"📰"}</div>
-                    <div className="news-feat-ov">
-                      <div className="nf-tag">{newsToShow[0]?.tag}</div>
-                      <div className="nf-tt">{newsToShow[0]?.title}</div>
-                      <div className="nf-mt"><span>{newsToShow[0]?.src}</span><span>{newsToShow[0]?.time}</span></div>
-                    </div>
-                  </div>
-                  {newsToShow.slice(1).map((n,i)=>(
-                    <div className="news-list-item" key={i} onClick={()=>setScreen({type:"news",data:n})}>
-                      <div className="nli-emoji">{n.emoji||"📰"}</div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div className="nli-tag">{n.tag}</div>
-                        <div className="nli-title">{n.title}</div>
-                        <div className="nli-meta">{n.src} · {n.time}</div>
-                      </div>
-                    </div>
-                  ))}
-                </>);})()}
-                <div style={{height:8}}/>
-              </div>
-            )}
-            {exploreSub==="stocks"&&(
-              <div style={{paddingTop:12}}>
-                <div className="idx" style={{margin:"0 16px 14px"}}>
-                  {indices.map((m,i)=><div className="ii" key={i}><div className="ii-n">{m.name}</div><div className="ii-v">{m.val}</div><div className={`ii-c ${m.up?"up":"dn"}`}>{m.chg}</div></div>)}
-                </div>
-                {stocks.map((s,i)=>(
-                  <div className="si" key={i} onClick={()=>setScreen({type:"stock",data:s})}>
-                    <div className="si-ic">{s.icon}</div>
-                    <div><div className="si-nm">{s.name}</div><div className="si-cd">{s.code}</div></div>
-                    <div className="si-r"><div className="si-p">{s.price}</div><div className={`si-c ${s.up?"up":"dn"}`}>{s.chg}</div></div>
-                  </div>
-                ))}
-                <button className="add-btn" style={{marginBottom:24}}>+ 新增追蹤股票</button>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ════ ADVISOR ════ */}
         {tab==="advisor"&&(
@@ -1750,12 +2848,242 @@ export default function App(){
               </div>
             </div>
             <div className="sub-tabs">
-              {[{id:"picks",label:"✦ 投資建議"},{id:"tools",label:"📋 投資工具"},{id:"qa",label:"🤖 AI 問答"}].map(t=>(
-                <div key={t.id} className={`st ${advisorSub===t.id?"active":""}`} onClick={()=>setAdvisorSub(t.id)}>{t.label}</div>
+              {[{id:"articles",label:"📖 凱特文章"},{id:"tools",label:"📋 投資工具"},{id:"notifs",label:"🔔 通知"},{id:"kattools",label:"🛠️ 顧問工具"},{id:"qa",label:"🤖 AI 問答"}].map(t=>(
+                <div key={t.id} className={`st ${advisorSub===t.id?"active":""}`} onClick={()=>setAdvisorSub(t.id)} style={{position:"relative"}}>
+                  {t.id==="notifs"&&notifs.filter(n=>n.unread).length>0&&<span style={{position:"absolute",top:4,right:4,minWidth:14,height:14,borderRadius:7,background:"var(--rose)",color:"#fff",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,padding:"0 3px"}}>{notifs.filter(n=>n.unread).length}</span>}
+                  {t.label}
+                </div>
               ))}
             </div>
 
-            {/* ─ 投資建議 ─ */}
+            {/* ─ 通知中心 ─ */}
+            {advisorSub==="notifs"&&(
+              <div style={{paddingTop:8,paddingBottom:32}}>
+
+                {/* 分類篩選 */}
+                {(()=>{
+                  const [notifFilter,setNotifFilter]=React.useState("all");
+                  const taxItems=notifs.filter(n=>n.isTax);
+                  const payItems=notifs.filter(n=>n.isPayment);
+                  const otherItems=notifs.filter(n=>!n.isTax&&!n.isPayment);
+                  const filtered=notifFilter==="tax"?taxItems:notifFilter==="payment"?payItems:notifFilter==="other"?otherItems:notifs;
+                  const unreadCount=filtered.filter(n=>n.unread).length;
+                  return(
+                    <>
+                      {/* 頂部統計 */}
+                      <div style={{margin:"0 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                        {[
+                          {label:"稅務提醒",count:taxItems.length,urgent:taxItems.filter(n=>n.cls==="ni-rose").length,icon:"🗓️",filter:"tax"},
+                          {label:"保單繳費",count:payItems.length,urgent:payItems.filter(n=>n.cls==="ni-rose").length,icon:"📅",filter:"payment"},
+                          {label:"其他通知",count:otherItems.length,urgent:0,icon:"🔔",filter:"other"},
+                        ].map(item=>(
+                          <div key={item.filter} onClick={()=>setNotifFilter(notifFilter===item.filter?"all":item.filter)} style={{background:notifFilter===item.filter?"rgba(154,110,32,.1)":"var(--card)",border:`1px solid ${notifFilter===item.filter?"rgba(154,110,32,.35)":"var(--bl)"}`,borderRadius:12,padding:"12px 10px",textAlign:"center",cursor:"pointer",transition:"all .2s"}}>
+                            <div style={{fontSize:18,marginBottom:4}}>{item.icon}</div>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:18,fontWeight:700,color:item.urgent>0?"#b05060":"var(--td)"}}>{item.count}</div>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"var(--md)",textTransform:"uppercase",marginTop:2,lineHeight:1.4}}>{item.label}</div>
+                            {item.urgent>0&&<div style={{marginTop:4,fontFamily:"'Cinzel',serif",fontSize:7,color:"#b05060",background:"rgba(176,80,96,.1)",borderRadius:10,padding:"2px 6px"}}>⚠ {item.urgent} 緊急</div>}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 全部已讀 & 篩選標題 */}
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"0 16px 10px"}}>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",textTransform:"uppercase"}}>
+                          {notifFilter==="all"?"所有通知":notifFilter==="tax"?"稅務提醒":notifFilter==="payment"?"保單繳費":"其他通知"}
+                          {unreadCount>0&&<span style={{marginLeft:6,background:"var(--rose)",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:8}}>{unreadCount}</span>}
+                        </div>
+                        <button onClick={()=>setNotifs(p=>p.map(n=>({...n,unread:false})))} style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"#8a5e18",background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.2)",borderRadius:8,padding:"5px 10px",cursor:"pointer"}}>全部已讀</button>
+                      </div>
+
+                      {/* 通知列表 */}
+                      {filtered.length===0?(
+                        <div style={{margin:"40px 16px",textAlign:"center"}}>
+                          <div style={{fontSize:32,marginBottom:12}}>✓</div>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"var(--md)"}}>目前沒有通知</div>
+                        </div>
+                      ):(
+                        filtered.map((n,i)=>{
+                          const isTaxActive=n.isTax&&n.title.includes("進行中");
+                          const isUrgent=n.cls==="ni-rose";
+                          return(
+                            <div key={n.id||i} onClick={()=>setNotifs(p=>p.map(x=>x.id===n.id?{...x,unread:false}:x))}
+                              style={{margin:"0 16px 10px",background:n.unread?"rgba(200,168,75,.05)":"var(--card)",border:`1px solid ${isUrgent?"rgba(176,80,96,.25)":n.unread?"rgba(200,168,75,.2)":"var(--bl)"}`,borderRadius:14,padding:"14px 16px",cursor:"pointer",transition:"all .2s",position:"relative"}}>
+                              {n.unread&&<div style={{position:"absolute",top:14,right:14,width:7,height:7,borderRadius:"50%",background:"var(--rose)"}}/>}
+                              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                                <div style={{width:40,height:40,borderRadius:11,background:isUrgent?"rgba(176,80,96,.12)":isTaxActive?"rgba(42,138,90,.12)":"rgba(154,110,32,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{n.icon}</div>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:13,fontWeight:600,color:isUrgent?"#b05060":"var(--td)",marginBottom:4,lineHeight:1.4}}>{n.title}</div>
+                                  <div style={{fontSize:12,color:"var(--md)",lineHeight:1.65}}>{n.desc}</div>
+                                  <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
+                                    <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"var(--md)",textTransform:"uppercase",background:"var(--card2)",padding:"2px 8px",borderRadius:10,border:"1px solid var(--bl)"}}>{n.time}</div>
+                                    {n.isTax&&<div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"#8a5e18",background:"rgba(154,110,32,.1)",padding:"2px 8px",borderRadius:10}}>稅務</div>}
+                                    {n.isPayment&&<div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"#2a8a5a",background:"rgba(42,138,90,.1)",padding:"2px 8px",borderRadius:10}}>保單</div>}
+                                  </div>
+                                </div>
+                              </div>
+                              {/* 快速行動按鈕 */}
+                              {n.isTax&&(
+                                <div style={{marginTop:10,display:"flex",gap:8}}>
+                                  <button onClick={e=>{e.stopPropagation();setTab("calc");setCalcMode(n.id?.includes("income")?"incometax":n.id?.includes("estate")?"estate":n.id?.includes("gift")?"gift":"incometax");}} style={{flex:1,padding:"8px",borderRadius:8,border:"1px solid rgba(154,110,32,.25)",background:"rgba(154,110,32,.08)",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"#8a5e18",cursor:"pointer"}}>前往試算 →</button>
+                                  <button onClick={e=>{e.stopPropagation();setShowMsg(true);}} style={{flex:1,padding:"8px",borderRadius:8,border:"1px solid var(--bl)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"var(--md)",cursor:"pointer"}}>諮詢凱特</button>
+                                </div>
+                              )}
+                              {n.isPayment&&(
+                                <div style={{marginTop:10}}>
+                                  <button onClick={e=>{e.stopPropagation();setTab("assets");setAssetsSub("holdings");setHoldingsTab("insurance");}} style={{width:"100%",padding:"8px",borderRadius:8,border:"1px solid rgba(42,138,90,.25)",background:"rgba(42,138,90,.08)",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"#1a6e42",cursor:"pointer"}}>查看保單詳情 →</button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+
+                      {/* 稅務年度行事曆快速預覽 */}
+                      <div className="sec" style={{marginTop:8}}>年度稅務行事曆</div>
+                      {(()=>{
+                        const today=new Date();
+                        const year=today.getFullYear();
+                        return TAX_CALENDAR.map(t=>{
+                          const start=new Date(year,t.month-1,t.day);
+                          const end=new Date(year,t.endMonth-1,t.endDay);
+                          const isActive=today>=start&&today<=end;
+                          const isPast=today>end;
+                          const daysToStart=Math.ceil((start-today)/(1000*60*60*24));
+                          const daysToEnd=Math.ceil((end-today)/(1000*60*60*24));
+                          return(
+                            <div key={t.key} style={{display:"flex",gap:10,alignItems:"center",margin:"0 16px 8px",padding:"12px 14px",background:"var(--card)",border:`1px solid ${isActive?"rgba(42,138,90,.2)":"var(--bl)"}`,borderRadius:12,opacity:isPast?0.4:1}}>
+                              <div style={{fontSize:20,width:32,textAlign:"center",flexShrink:0}}>{t.icon}</div>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:13,fontWeight:600,color:"var(--td)",marginBottom:2}}>{t.name}</div>
+                                <div style={{fontSize:11,color:"var(--md)"}}>{year}/{t.month}/{t.day} — {year}/{t.endMonth}/{t.endDay}</div>
+                              </div>
+                              <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
+                                {isPast?(
+                                  <div style={{fontFamily:"'Cinzel',serif",fontSize:8,color:"var(--md)"}}>已截止</div>
+                                ):isActive?(
+                                  <div style={{background:"rgba(42,138,90,.1)",border:"1px solid rgba(42,138,90,.2)",borderRadius:8,padding:"4px 8px"}}>
+                                    <div style={{fontFamily:"'Cinzel',serif",fontSize:7,color:"#1a6e42",letterSpacing:1}}>進行中</div>
+                                    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:700,color:"#1a6e42"}}>{daysToEnd}天</div>
+                                  </div>
+                                ):(
+                                  <div style={{background:daysToStart<=14?"rgba(176,80,96,.08)":"var(--card2)",border:`1px solid ${daysToStart<=14?"rgba(176,80,96,.2)":"var(--bl)"}`,borderRadius:8,padding:"4px 8px"}}>
+                                    <div style={{fontFamily:"'Cinzel',serif",fontSize:7,color:daysToStart<=14?"#b05060":"var(--md)",letterSpacing:1}}>還有</div>
+                                    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:700,color:daysToStart<=14?"#b05060":"var(--td)"}}>{daysToStart}天</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                      <div style={{height:8}}/>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* ─ 凱特文章 ─ */}
+            {advisorSub==="articles"&&(
+              <div style={{paddingTop:12,paddingBottom:24}}>
+                {/* 後台：isKate 可發布新文章 */}
+                {isKate&&(
+                  <div style={{margin:"0 16px 14px",background:"rgba(154,110,32,.06)",border:"1px solid rgba(154,110,32,.2)",borderRadius:14,padding:"14px 16px"}}>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"#9a6e20",marginBottom:8,textTransform:"uppercase"}}>✦ 後台 — 發布新文章</div>
+                    <button onClick={()=>{setTab("advisor");setAdvisorSub("picks");}} style={{width:"100%",padding:"10px",border:"none",borderRadius:10,background:"linear-gradient(135deg,#9a6e20,#c8a84b)",color:"#fff",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,cursor:"pointer"}}>前往 AI 生成投資建議 →</button>
+                  </div>
+                )}
+                {/* 已發布文章 */}
+                {(publishedPicks?[{id:"pub",badge:"最新發布",title:publishedPicks.title,body:publishedPicks.body,publishedAt:publishedPicks.publishedAt||"剛剛",theme:publishedPicks.theme},...katePosts.map(k=>({...k,publishedAt:"2026/04/05"}))]:katePosts.map(k=>({...k,publishedAt:"2026/04/05"}))).map((article,i)=>(
+                  <div key={article.id||i} style={{margin:"0 16px 12px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:16,overflow:"hidden",cursor:"pointer"}} onClick={()=>setScreen({type:"article",data:article})}>
+                    <div style={{height:3,background:i===0?"linear-gradient(90deg,#9a6e20,#c8a84b)":"linear-gradient(90deg,#2a5ea8,#4878c0)"}}/>
+                    <div style={{padding:"16px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:i===0?"#9a6e20":"#2a5ea8",textTransform:"uppercase",padding:"3px 10px",background:i===0?"rgba(154,110,32,.1)":"rgba(42,94,168,.1)",borderRadius:20}}>{article.badge||article.theme||"凱特觀點"}</div>
+                        <div style={{fontSize:11,color:"var(--md)"}}>{article.publishedAt}</div>
+                      </div>
+                      <div style={{fontFamily:"'Noto Serif TC',serif",fontSize:16,fontWeight:600,color:"var(--td)",lineHeight:1.5,marginBottom:8}}>{article.title}</div>
+                      <div style={{fontSize:13,color:"var(--md)",lineHeight:1.65}}>{(article.preview||article.body||"").slice(0,80)}…</div>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:i===0?"#9a6e20":"#2a5ea8",marginTop:12}}>閱讀全文 →</div>
+                    </div>
+                  </div>
+                ))}
+                {/* 知識主題 */}
+                <div className="sec">財務知識主題</div>
+                {[
+                  {icon:"🏠",title:"房地產稅務規劃",desc:"房地合一稅、自住優惠、節稅時機",tag:"稅務"},
+                  {icon:"📋",title:"遺產傳承規劃",desc:"遺產稅計算、保險傳承、信託配置",tag:"傳承"},
+                  {icon:"🌏",title:"境外資產配置",desc:"香港、新加坡保單優勢與注意事項",tag:"配置"},
+                  {icon:"💰",title:"退休金準備指南",desc:"複利效果、退休缺口試算、分紅保單",tag:"退休"},
+                  {icon:"⚠️",title:"地緣政治避險",desc:"台海風險下的資產分散策略",tag:"風險"},
+                ].map((t,i)=>(
+                  <div key={i} style={{margin:"0 16px 10px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",cursor:"pointer"}} onClick={()=>{
+                    const topicMsgs={
+                      "房地產稅務規劃":"我想了解房地產稅務規劃",
+                      "遺產傳承規劃":"我想了解遺產傳承規劃",
+                      "境外資產配置":"我想了解境外資產配置",
+                      "退休金準備指南":"我想了解退休金規劃",
+                      "地緣政治避險":"我想了解地緣政治風險下的資產配置",
+                    };
+                    const topicIntros={
+                      "房地產稅務規劃":`您好！在幫您介紹房地產稅務規劃之前，我想先了解一下您的狀況 😊 請問：
+
+1️⃣ 您目前持有幾間房產？是自住、出租，還是投資用途？
+2️⃣ 有考慮在近期買賣房產嗎？
+3️⃣ 持有年限大概多久了？
+
+這樣我可以針對您的情況，給您最精準的節稅建議！`,
+                      "遺產傳承規劃":`您好！傳承規劃是很多高資產家庭都在關注的議題 👨‍👩‍👧‍👦 在為您量身規劃之前，想先了解幾件事：
+
+1️⃣ 您目前大概的資產規模（房產、保單、現金）？
+2️⃣ 有幾位繼承人（配偶、子女）？
+3️⃣ 資產主要在台灣，還是也有海外配置？
+
+了解後我可以幫您估算遺產稅，並推薦最適合的傳承工具！`,
+                      "境外資產配置":`您好！境外配置是分散風險的重要策略 🌏 在介紹產品之前，想先了解您的需求：
+
+1️⃣ 您考慮配置境外的主要原因是什麼？（節稅、傳承、分散風險、還是資產保全？）
+2️⃣ 預計配置的金額大概是多少？
+3️⃣ 對香港、新加坡、或其他地區有偏好嗎？
+
+這樣我可以為您推薦最合適的境外保單組合！`,
+                      "退休金準備指南":`您好！退休規劃越早開始越好 🏖️ 讓我先了解一下您現在的狀況：
+
+1️⃣ 您目前幾歲？預計幾歲退休？
+2️⃣ 退休後每月希望有多少生活費（台幣）？
+3️⃣ 目前已累積的退休金大約多少？（勞退、保單、存款等）
+
+填完這些資訊，我可以幫您算出退休缺口，並推薦最有效率的補足方案！`,
+                      "地緣政治避險":`您好！台海局勢是很多客戶近期最關心的議題 ⚠️ 讓我先了解您目前的配置：
+
+1️⃣ 您的資產目前主要在哪裡？（台灣房產、台股、現金、還是已有部分海外？）
+2️⃣ 最擔心的風險是什麼？（資產凍結、匯率貶值、法規變動？）
+3️⃣ 希望分散到哪個地區？
+
+了解後我可以為您設計一套具體的避險配置方案！`,
+                    };
+                    setShowMsg(true);
+                    setTimeout(()=>{
+                      const userMsg=topicMsgs[t.title]||`我想了解${t.title}`;
+                      const kateMsg=topicIntros[t.title]||`您好！關於${t.title}，我想先了解您的狀況，以便給您最適合的建議。`;
+                      addMsg({type:"user",text:userMsg});
+                      addMsg({type:"kate",text:kateMsg});
+                      setChatHistory(p=>[...p,{role:"user",content:userMsg},{role:"assistant",content:kateMsg}]);
+                    },100);
+                  }}>
+                    <div style={{width:44,height:44,borderRadius:12,background:"rgba(154,110,32,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{t.icon}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:"'Noto Serif TC',serif",fontSize:14,fontWeight:600,color:"var(--td)",marginBottom:3}}>{t.title}</div>
+                      <div style={{fontSize:12,color:"var(--md)",lineHeight:1.5}}>{t.desc}</div>
+                    </div>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"#9a6e20",background:"rgba(154,110,32,.1)",padding:"3px 8px",borderRadius:10,flexShrink:0}}>{t.tag}</div>
+                  </div>
+                ))}
+                <div style={{height:8}}/>
+              </div>
+            )}
+
+            {/* ─ 投資建議後台 (isKate picks) ─ */}
             {advisorSub==="picks"&&(
               <div style={{paddingTop:4}}>
                 {/* Kate 後台 */}
@@ -1960,6 +3288,133 @@ export default function App(){
             )}
 
             {/* ─ AI 問答（整合財商教室）─ */}
+            {/* ─ 顧問工具 ─ */}
+            {advisorSub==="kattools"&&(
+              <div style={{paddingTop:8,paddingBottom:24}}>
+
+                {/* 凱特推播通知 */}
+                {isKate&&(
+                  <>
+                    <div className="sec">推播通知給客戶</div>
+                    <div style={{margin:"0 16px 14px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"16px"}}>
+                      <div style={{fontSize:12,color:"var(--md)",marginBottom:12,lineHeight:1.7}}>選擇通知類型，系統將自動推播給所有客戶的通知中心。</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        {[
+                          {icon:"💼",label:"綜所稅申報提醒（5/1～6/1）",key:"income_tax"},
+                          {icon:"🏠",label:"房屋稅繳納提醒（5月）",key:"house_tax"},
+                          {icon:"🌍",label:"地價稅繳納提醒（11月）",key:"land_tax"},
+                          {icon:"🎁",label:"年底贈與稅額度提醒",key:"gift_tax"},
+                          {icon:"📅",label:"保單繳費日提醒",key:"ins_payment"},
+                        ].map(item=>(
+                          <button key={item.key} onClick={()=>{
+                            const newNotif={
+                              id:`kate_push_${item.key}_${Date.now()}`,
+                              icon:item.icon,cls:"ni-gold",
+                              title:`✦ 凱特提醒｜${item.label.split("（")[0]}`,
+                              desc:`${item.label}，請注意相關期限與規劃。如需試算或諮詢，點此聯繫凱特顧問。`,
+                              time:"剛剛",unread:true,
+                            };
+                            setNotifs(p=>[newNotif,...p]);
+                            showToast(`✓ 已推播「${item.label.split("（")[0]}」通知`);
+                          }} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:10,border:"1px solid var(--bl)",background:"var(--card2)",cursor:"pointer",textAlign:"left",width:"100%"}}>
+                            <span style={{fontSize:18}}>{item.icon}</span>
+                            <div style={{flex:1,fontSize:13,color:"var(--td)"}}>{item.label}</div>
+                            <span style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"#8a5e18"}}>推播 ›</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* 繳費日管理 */}
+                <div className="sec">繳費日追蹤</div>
+                <div style={{margin:"0 16px 14px"}}>
+                  {insuranceHoldings.map((h,i)=>{
+                    const nextYear=Number(h.startYear)+Math.ceil((new Date().getFullYear()-Number(h.startYear)));
+                    const nextDate=`${nextYear}-03-01`;
+                    const daysLeft=Math.ceil((new Date(nextDate)-new Date())/(1000*60*60*24));
+                    const urgent=daysLeft<30;
+                    return(
+                      <div key={i} style={{background:"var(--card)",border:`1px solid ${urgent?"rgba(176,80,96,.3)":"var(--bl)"}`,borderRadius:14,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <div>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:urgent?"#b05060":"#8a5e18",textTransform:"uppercase",marginBottom:4}}>{urgent?"⚠ 即將到期":"📅 繳費提醒"}</div>
+                          <div style={{fontSize:14,fontWeight:600,color:"var(--td)",marginBottom:2}}>{h.product.split("—")[1]?.trim()||h.product}</div>
+                          <div style={{fontSize:12,color:"var(--md)"}}>年繳 {h.annualPremiumUSD>0?`USD ${h.annualPremiumUSD.toLocaleString()}`:"-"}</div>
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:22,fontWeight:700,color:urgent?"#b05060":"#8a5e18"}}>{Math.abs(daysLeft)}</div>
+                          <div style={{fontSize:11,color:"var(--md)"}}>{daysLeft>0?"天後":"天前"}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {insuranceHoldings.length===0&&<div style={{padding:"20px 16px",color:"var(--md)",fontSize:13,textAlign:"center"}}>尚無保單資料</div>}
+                </div>
+
+                {/* 客戶財務摘要卡 */}
+                <div className="sec">客戶財務摘要卡</div>
+                <div style={{margin:"0 16px 14px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"16px"}}>
+                  <div style={{fontSize:13,color:"var(--md)",marginBottom:12}}>選擇客戶，一鍵生成財務摘要</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
+                    {onboardingList.map(c=>(
+                      <div key={c.id} onClick={()=>setSummaryClientId(summaryClientId===c.id?null:c.id)} style={{padding:"12px 14px",borderRadius:10,border:`1px solid ${summaryClientId===c.id?"rgba(154,110,32,.4)":"var(--bl)"}`,background:summaryClientId===c.id?"rgba(154,110,32,.08)":"var(--card2)",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div>
+                          <div style={{fontSize:14,fontWeight:600,color:"var(--td)"}}>{c.name}</div>
+                          <div style={{fontSize:12,color:"var(--md)",marginTop:2}}>{c.risk} · {c.goals?.join("、")}</div>
+                        </div>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:summaryClientId===c.id?"#8a5e18":"var(--md)"}}>{summaryClientId===c.id?"已選✓":"選擇"}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {summaryClientId&&(()=>{
+                    const c=onboardingList.find(x=>x.id===summaryClientId);
+                    if(!c)return null;
+                    return(
+                      <div style={{padding:"14px",background:"linear-gradient(135deg,#faf6ee,#f2ebe0)",border:"1px solid rgba(154,110,32,.2)",borderRadius:12}}>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:3,color:"#9a6e20",textTransform:"uppercase",marginBottom:12}}>財務摘要 · {c.name}</div>
+                        {[["建檔日期",c.date],["風險偏好",c.risk],["財務目標",c.goals?.join("、")||"-"],["保單數量",`${insuranceHoldings.length} 張`],["股票持倉",`${stockHoldings.length} 檔`],["固收投資",`${fixedHoldings.length} 筆`],["總資產估值",fmtTWD(grandTotalTWD)]].map(([l,v])=>(
+                          <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(154,110,32,.1)"}}>
+                            <div style={{fontSize:12,color:"#6b5040"}}>{l}</div>
+                            <div style={{fontSize:12,fontWeight:600,color:"#2c1e0f"}}>{v}</div>
+                          </div>
+                        ))}
+                        <button onClick={()=>showToast("✓ 已複製摘要")} style={{width:"100%",marginTop:12,padding:"10px",border:"none",borderRadius:10,background:"linear-gradient(135deg,#9a6e20,#c8a84b)",color:"#fff",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,cursor:"pointer"}}>複製摘要</button>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* 推薦信 / 感謝信 AI 生成 */}
+                <div className="sec">AI 信件生成</div>
+                <div style={{margin:"0 16px 14px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"16px"}}>
+                  <div style={{display:"flex",gap:8,marginBottom:12}}>
+                    {[{id:"referral",label:"推薦信"},{id:"thanks",label:"感謝信"},{id:"followup",label:"跟進信"}].map(t=>(
+                      <div key={t.id} onClick={()=>setLetterType(t.id)} style={{flex:1,padding:"9px",textAlign:"center",borderRadius:10,border:`1px solid ${letterType===t.id?"rgba(154,110,32,.4)":"var(--bl)"}`,background:letterType===t.id?"rgba(154,110,32,.1)":"transparent",fontFamily:"'Cinzel',serif",fontSize:10,color:letterType===t.id?"#8a5e18":"var(--md)",cursor:"pointer"}}>{t.label}</div>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+                    {onboardingList.map(c=>(
+                      <div key={c.id} onClick={()=>genLetter(c.name,letterType)} style={{padding:"8px 14px",borderRadius:20,border:"1px solid var(--bl)",background:"var(--card2)",fontSize:12,color:"var(--td)",cursor:"pointer"}}>
+                        {c.name} →
+                      </div>
+                    ))}
+                    <div onClick={()=>genLetter("客戶",letterType)} style={{padding:"8px 14px",borderRadius:20,border:"1px dashed rgba(154,110,32,.3)",background:"transparent",fontSize:12,color:"#8a5e18",cursor:"pointer"}}>
+                      + 通用版本
+                    </div>
+                  </div>
+                  {letterLoading&&<div style={{textAlign:"center",padding:"16px",color:"var(--md)",fontSize:12}}>✦ AI 生成中…</div>}
+                  {letterResult&&!letterLoading&&(
+                    <div>
+                      <div style={{background:"var(--card2)",borderRadius:10,padding:"14px",fontSize:13,color:"var(--td)",lineHeight:1.8,marginBottom:10,whiteSpace:"pre-wrap"}}>{letterResult}</div>
+                      <button onClick={()=>{navigator.clipboard?.writeText(letterResult);showToast("✓ 已複製");}} style={{width:"100%",padding:"10px",border:"none",borderRadius:10,background:"linear-gradient(135deg,#9a6e20,#c8a84b)",color:"#fff",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,cursor:"pointer"}}>複製信件</button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
             {advisorSub==="qa"&&(
               <div style={{paddingTop:16}}>
                 <div className="qa-wrap">
@@ -2016,7 +3471,7 @@ export default function App(){
           <div className="holding-form-sheet">
             <div className="hf-title">{editInsId?"編輯保單":"新增保單"}</div>
             <div className="hf-lbl" style={{marginTop:0}}>保險產品</div>
-            <select className="hf-inp" value={insForm.product} onChange={e=>setInsForm(p=>({...p,product:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
+            <select className="hf-inp" value={insForm.product} onChange={e=>setInsForm(p=>({...p,product:e.target.value}))} style={{cursor:"pointer"}}>
               {INSURANCE_PRODUCTS.map(pr=><option key={pr} value={pr}>{pr}</option>)}
             </select>
             <div className="hf-lbl">保單類型</div>
@@ -2027,8 +3482,8 @@ export default function App(){
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {["躉繳","2年","5年","12年"].map(t=>(<div key={t} className={`hf-type-chip ${insForm.paymentTerm===t?"active":""}`} onClick={()=>setInsForm(p=>({...p,paymentTerm:t}))} style={{padding:"8px 14px"}}>{t}</div>))}
             </div>
-            <div className="hf-lbl">起保年份</div>
-            <input className="hf-inp" type="number" placeholder="例如：2024" value={insForm.startYear} onChange={e=>setInsForm(p=>({...p,startYear:e.target.value}))}/>
+            <div className="hf-lbl">起保年份（選填）</div>
+            <input className="hf-inp" type="number" placeholder="例如：2024（可留空）" value={insForm.startYear} onChange={e=>setInsForm(p=>({...p,startYear:e.target.value}))}/>
             <div className="hf-lbl">年繳保費（USD）</div>
             <input className="hf-inp" type="number" placeholder="例如：25000" value={insForm.annualPremiumUSD} onChange={e=>setInsForm(p=>({...p,annualPremiumUSD:e.target.value}))}/>
             <div className="hf-lbl">投保額 / Face Amount（USD）</div>
@@ -2074,7 +3529,7 @@ export default function App(){
           <div className="holding-form-sheet">
             <div className="hf-title">{editFixedId?"編輯固收":"新增私募固收"}</div>
             <div className="hf-lbl" style={{marginTop:0}}>產品</div>
-            <select className="hf-inp" value={fixedForm.product} onChange={e=>setFixedForm(p=>({...p,product:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
+            <select className="hf-inp" value={fixedForm.product} onChange={e=>setFixedForm(p=>({...p,product:e.target.value}))} style={{cursor:"pointer"}}>
               {["萬兆豐 — 金益求金","萬兆豐 — 金益求兆"].map(pr=><option key={pr} value={pr}>{pr}</option>)}
             </select>
             <div className="hf-lbl">投入本金（USD）</div>
@@ -2084,13 +3539,80 @@ export default function App(){
             <div className="hf-row">
               <div style={{flex:1}}><div className="hf-lbl">起始日期</div><input className="hf-inp" type="month" value={fixedForm.startDate} onChange={e=>setFixedForm(p=>({...p,startDate:e.target.value}))}/></div>
               <div style={{flex:1,marginLeft:8}}><div className="hf-lbl">鎖定期（年）</div>
-                <select className="hf-inp" value={fixedForm.lockYears} onChange={e=>setFixedForm(p=>({...p,lockYears:e.target.value}))} style={{appearance:"none",cursor:"pointer"}}>
+                <select className="hf-inp" value={fixedForm.lockYears} onChange={e=>setFixedForm(p=>({...p,lockYears:e.target.value}))} style={{cursor:"pointer"}}>
                   {["1","2","3"].map(y=><option key={y} value={y}>{y} 年</option>)}
                 </select>
               </div>
             </div>
             <button className="hf-save-btn" onClick={saveFixed}>儲存</button>
             <button className="hf-cancel-btn" onClick={()=>setShowFixedForm(false)}>取消</button>
+          </div>
+        </div>
+      )}
+      {/* 貴金屬表單 */}
+      {showMetalForm&&(
+        <div className="holding-form-overlay" onClick={e=>e.target===e.currentTarget&&setShowMetalForm(false)}>
+          <div className="holding-form-sheet">
+            <div className="hf-title">{editMetalId?"編輯貴金屬":"新增貴金屬"}</div>
+            <div className="hf-lbl" style={{marginTop:0}}>產品</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {["萬兆豐貴金屬 — 實體黃金","萬兆豐 — 金盈滿堂（黃金存摺）"].map(pr=>(
+                <div key={pr} onClick={()=>setMetalForm(p=>({...p,product:pr}))}
+                  style={{padding:"12px 16px",borderRadius:11,border:metalForm.product===pr?"1px solid rgba(184,144,42,.6)":"1px solid var(--bl)",background:metalForm.product===pr?"rgba(184,144,42,.12)":"var(--card2)",cursor:"pointer",fontSize:14,color:"var(--td)",transition:"all .2s"}}>
+                  {metalForm.product===pr&&<span style={{color:"#b8902a",marginRight:8}}>✓</span>}{pr}
+                </div>
+              ))}
+            </div>
+            <div className="hf-lbl">重量（公克）</div>
+            <input className="hf-inp" type="number" placeholder="例如：1000" value={metalForm.grams} onChange={e=>setMetalForm(p=>({...p,grams:e.target.value}))}/>
+            <div className="hf-row">
+              <div style={{flex:1}}><div className="hf-lbl">購入單價（USD/g）</div><input className="hf-inp" type="number" placeholder="例如：95" value={metalForm.costPerGram} onChange={e=>setMetalForm(p=>({...p,costPerGram:e.target.value}))}/></div>
+              <div style={{flex:1,marginLeft:8}}><div className="hf-lbl">現價（USD/g）</div><input className="hf-inp" type="number" placeholder="例如：105" value={metalForm.currentPricePerGram} onChange={e=>setMetalForm(p=>({...p,currentPricePerGram:e.target.value}))}/></div>
+            </div>
+            <div className="hf-lbl">購入日期</div>
+            <input className="hf-inp" type="month" value={metalForm.purchaseDate} onChange={e=>setMetalForm(p=>({...p,purchaseDate:e.target.value}))}/>
+            {(!metalForm.grams||!metalForm.purchaseDate)&&<div style={{fontSize:11,color:"var(--md)",marginTop:8,textAlign:"center"}}>請填寫重量與購入日期</div>}
+            <button className="hf-save-btn" onClick={saveMetal} style={{opacity:(!metalForm.grams||!metalForm.purchaseDate)?0.45:1}}>儲存</button>
+            <button className="hf-cancel-btn" onClick={()=>setShowMetalForm(false)}>取消</button>
+          </div>
+        </div>
+      )}
+      {/* 房地產表單 */}
+      {showRealEstateForm&&(
+        <div className="holding-form-overlay" onClick={e=>e.target===e.currentTarget&&setShowRealEstateForm(false)}>
+          <div className="holding-form-sheet">
+            <div className="hf-title">{editRealEstateId?"編輯不動產":"新增不動產"}</div>
+            <div className="hf-lbl" style={{marginTop:0}}>物件名稱</div>
+            <input className="hf-inp" placeholder="例如：台北市大安區自住房" value={realEstateForm.name} onChange={e=>setRealEstateForm(p=>({...p,name:e.target.value}))}/>
+            <div className="hf-lbl">物件類型</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {["住宅","辦公室","商舖","廠房","土地","其他"].map(t=>(
+                <div key={t} className={`hf-type-chip ${realEstateForm.propertyType===t?"active":""}`} onClick={()=>setRealEstateForm(p=>({...p,propertyType:t}))} style={{padding:"8px 14px"}}>{t}</div>
+              ))}
+            </div>
+            <div className="hf-lbl">地址（選填）</div>
+            <input className="hf-inp" placeholder="例如：台北市大安區信義路四段" value={realEstateForm.address} onChange={e=>setRealEstateForm(p=>({...p,address:e.target.value}))}/>
+            <div className="hf-lbl">幣別</div>
+            <div style={{display:"flex",gap:8}}>
+              {["TWD","USD"].map(c=>(<div key={c} className={`hf-type-chip ${realEstateForm.currency===c?"active":""}`} onClick={()=>setRealEstateForm(p=>({...p,currency:c}))} style={{flex:1,textAlign:"center",padding:"10px"}}>{c}</div>))}
+            </div>
+            <div className="hf-lbl">目前市值</div>
+            <input className="hf-inp" type="number" placeholder={realEstateForm.currency==="TWD"?"例如：25000000":"例如：500000"} value={realEstateForm.marketValue} onChange={e=>setRealEstateForm(p=>({...p,marketValue:e.target.value}))}/>
+            <div className="hf-lbl">房屋稅評定現值（選填）</div>
+            <input className="hf-inp" type="number" placeholder="例如：8000000" value={realEstateForm.govValue} onChange={e=>setRealEstateForm(p=>({...p,govValue:e.target.value}))}/>
+            <div className="hf-lbl">剩餘貸款（無則填 0）</div>
+            <input className="hf-inp" type="number" placeholder="例如：12000000" value={realEstateForm.mortgage} onChange={e=>setRealEstateForm(p=>({...p,mortgage:e.target.value}))}/>
+            <div className="hf-row">
+              <div style={{flex:1}}><div className="hf-lbl">購入年份（選填）</div><input className="hf-inp" type="number" placeholder="例如：2018" value={realEstateForm.purchaseYear} onChange={e=>setRealEstateForm(p=>({...p,purchaseYear:e.target.value}))}/></div>
+              <div style={{flex:1,marginLeft:8}}><div className="hf-lbl">購入價格（選填）</div><input className="hf-inp" type="number" placeholder="例如：18000000" value={realEstateForm.purchasePrice} onChange={e=>setRealEstateForm(p=>({...p,purchasePrice:e.target.value}))}/></div>
+            </div>
+            <div className="hf-lbl">年租金收益（選填）</div>
+            <input className="hf-inp" type="number" placeholder="例如：360000（無出租填 0）" value={realEstateForm.annualReturn} onChange={e=>setRealEstateForm(p=>({...p,annualReturn:e.target.value}))}/>
+            <div className="hf-lbl">備註（選填）</div>
+            <input className="hf-inp" placeholder="例如：自住、出租中、待售" value={realEstateForm.notes} onChange={e=>setRealEstateForm(p=>({...p,notes:e.target.value}))}/>
+            {!realEstateForm.name&&<div style={{fontSize:11,color:"var(--md)",marginTop:8,textAlign:"center"}}>請填寫物件名稱</div>}
+            <button className="hf-save-btn" onClick={saveRealEstate} style={{opacity:!realEstateForm.name?0.45:1}}>儲存</button>
+            <button className="hf-cancel-btn" onClick={()=>setShowRealEstateForm(false)}>取消</button>
           </div>
         </div>
       )}
@@ -2126,6 +3648,65 @@ export default function App(){
             </div>
             <button className="hform-submit" onClick={submitHealthForm}>計算我的健康分數 →</button>
             <button className="hform-cancel" onClick={()=>setShowHealthForm(false)}>取消</button>
+          </div>
+        </div>
+      )}
+      {/* 保障覆蓋率表單 */}
+      {showCoverageForm&&(
+        <div className="health-form-overlay">
+          <div className="health-form-wrap">
+            <div className="hform-hdr">
+              <div className="hform-title">🛡️ 保障覆蓋率分析</div>
+              <div className="hform-sub">填寫現有保障，立即看見缺口</div>
+            </div>
+
+            {/* 壽險 */}
+            <div className="hform-section">
+              <div className="hform-section-title">💙 壽險保障</div>
+              <div className="hform-lbl">家庭每月支出 (TWD)</div>
+              <input className="hform-inp" type="number" placeholder="例如：80000" value={coverageForm.monthlyExpense} onChange={e=>setCoverageForm(p=>({...p,monthlyExpense:e.target.value}))}/>
+              <div style={{fontSize:12,color:"var(--md)",marginTop:4,lineHeight:1.6}}>建議壽險保額 = 月支出 × 12 × 10 年</div>
+              <div className="hform-lbl">目前壽險保額合計 (TWD)</div>
+              <input className="hform-inp" type="number" placeholder="例如：5000000" value={coverageForm.lifeInsurance} onChange={e=>setCoverageForm(p=>({...p,lifeInsurance:e.target.value}))}/>
+              {coverageForm.monthlyExpense&&coverageForm.lifeInsurance&&(
+                <div style={{marginTop:8,padding:"10px 12px",background:Number(coverageForm.lifeInsurance)>=Number(coverageForm.monthlyExpense)*120?"rgba(42,138,90,.08)":"rgba(176,80,96,.08)",borderRadius:8,fontSize:12,color:Number(coverageForm.lifeInsurance)>=Number(coverageForm.monthlyExpense)*120?"#1a6e42":"#b05060"}}>
+                  {Number(coverageForm.lifeInsurance)>=Number(coverageForm.monthlyExpense)*120
+                    ?`✓ 保額充足，可支撐 ${Math.round(Number(coverageForm.lifeInsurance)/(Number(coverageForm.monthlyExpense)*12)*10)/10} 年`
+                    :`⚠ 建議保額 NT$ ${(Number(coverageForm.monthlyExpense)*120).toLocaleString()}，目前缺口 NT$ ${(Number(coverageForm.monthlyExpense)*120-Number(coverageForm.lifeInsurance)).toLocaleString()}`
+                  }
+                </div>
+              )}
+            </div>
+
+            {/* 實支實付 */}
+            <div className="hform-section">
+              <div className="hform-section-title">🏥 實支實付醫療險</div>
+              <div className="hform-lbl">每次住院最高理賠額 (TWD)</div>
+              <input className="hform-inp" type="number" placeholder="例如：300000" value={coverageForm.realExpense} onChange={e=>setCoverageForm(p=>({...p,realExpense:e.target.value}))}/>
+              <div style={{fontSize:12,color:"var(--md)",marginTop:4,lineHeight:1.6}}>一般手術自費耗材 10~30 萬，重大手術可達 50 萬以上。建議至少 50 萬/次</div>
+            </div>
+
+            {/* 住院日額 */}
+            <div className="hform-section">
+              <div className="hform-section-title">🛏️ 住院日額</div>
+              <div className="hform-lbl">每日住院補貼 (TWD)</div>
+              <input className="hform-inp" type="number" placeholder="例如：2000" value={coverageForm.dailyHospital} onChange={e=>setCoverageForm(p=>({...p,dailyHospital:e.target.value}))}/>
+              <div style={{fontSize:12,color:"var(--md)",marginTop:4,lineHeight:1.6}}>住院 30 天補貼：NT$ {((Number(coverageForm.dailyHospital)||0)*30).toLocaleString()}。建議每日至少 3,000 元</div>
+            </div>
+
+            {/* 癌症 */}
+            <div className="hform-section">
+              <div className="hform-section-title">🎗️ 癌症一次金</div>
+              <div className="hform-lbl">確診癌症一次理賠金 (TWD)</div>
+              <input className="hform-inp" type="number" placeholder="例如：500000" value={coverageForm.cancerLump} onChange={e=>setCoverageForm(p=>({...p,cancerLump:e.target.value}))}/>
+              <div style={{fontSize:12,color:"var(--md)",marginTop:4,lineHeight:1.6}}>
+                平均停工 6 個月：NT$ {((Number(coverageForm.monthlyExpense)||0)*6).toLocaleString()}。
+                建議癌症一次金 100 萬以上，含停工損失與標靶治療費用
+              </div>
+            </div>
+
+            <button className="hform-submit" onClick={calcCoverage}>分析我的保障缺口 →</button>
+            <button className="hform-cancel" onClick={()=>setShowCoverageForm(false)}>取消</button>
           </div>
         </div>
       )}
