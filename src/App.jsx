@@ -183,10 +183,37 @@ function getNewsSVG(tag,emoji,cls){
     <text x="30" y="42" font-family="serif" font-size="42" opacity=".15" fill="white">${emoji}</text>
   </svg>`;
 }
-// ── Unsplash 新聞配圖 ──
-function getNewsImgUrl(imgQuery,size="800x400"){
-  const q=encodeURIComponent(imgQuery||"finance market");
-  return`https://source.unsplash.com/${size}/?${q}`;
+// ── 新聞配圖 ──
+// 根據主題關鍵字映射到 Unsplash 精選圖片 ID（穩定可用）
+const NEWS_IMG_MAP={
+  "federal reserve":"photo-1611974789855-9c2a0a7236a3", // Fed/finance building
+  "interest rate":"photo-1611974789855-9c2a0a7236a3",
+  "inflation":"photo-1549421263-5ec394a5ad4c",           // economy/inflation
+  "economy":"photo-1504868584819-f8e8b4b6d7e3",         // economy chart
+  "stock market":"photo-1611974789855-9c2a0a7236a3",    // stock market
+  "wall street":"photo-1611974789855-9c2a0a7236a3",
+  "semiconductor":"photo-1518770660439-4636190af475",   // chip/semiconductor
+  "chip":"photo-1518770660439-4636190af475",
+  "taiwan":"photo-1565967511849-76a60a516170",          // taipei cityscape
+  "gold":"photo-1610375461246-83df859d849d",            // gold bars
+  "currency":"photo-1580519542036-c47de6196ba5",        // currency
+  "nasdaq":"photo-1611974789855-9c2a0a7236a3",
+  "ai":"photo-1677442135703-1787eea5ce01",              // AI/tech
+  "nvidia":"photo-1518770660439-4636190af475",
+  "gdp":"photo-1504868584819-f8e8b4b6d7e3",
+  "default_tm":"photo-1611974789855-9c2a0a7236a3",      // 總經
+  "default_tt":"photo-1535320903710-d993d3d77d29",      // 股市
+  "default_ti":"photo-1518770660439-4636190af475",      // 個股
+  "default_tb":"photo-1610375461246-83df859d849d",      // 台灣資產
+};
+function getNewsImgUrl(imgQuery,cls){
+  const q=(imgQuery||"").toLowerCase();
+  let id="";
+  for(const [key,val] of Object.entries(NEWS_IMG_MAP)){
+    if(q.includes(key)){id=val;break;}
+  }
+  if(!id) id=NEWS_IMG_MAP[`default_${cls||"tm"}`]||NEWS_IMG_MAP["default_tm"];
+  return`https://images.unsplash.com/${id}?w=800&q=75&fit=crop&auto=format`;
 }
 
 async function searchNews(query){
@@ -1852,7 +1879,7 @@ export default function App(){
         <div style={{position:"relative"}}>
           <div className="nd-hero" style={{padding:0,minHeight:260,position:"relative",overflow:"hidden",background:"#1a1008"}}>
             <img
-              src={getNewsImgUrl(n.imgQuery||(n.tag==="總經"?"federal reserve economy":n.tag==="股市"?"stock market trading":n.tag==="個股"?"technology chip":"taiwan finance"),"900x520")}
+              src={getNewsImgUrl(n.imgQuery,n.cls)}
               alt={n.title}
               style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}
               onError={e=>{e.target.style.display="none";}}
@@ -2164,7 +2191,7 @@ export default function App(){
               <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})} style={{padding:0,overflow:"hidden",flexDirection:"column",gap:0}}>
                 <div style={{height:160,position:"relative",overflow:"hidden",flexShrink:0,background:"#1a1008"}}>
                   <img
-                    src={getNewsImgUrl(n.imgQuery||(n.tag==="總經"?"federal reserve economy finance":n.tag==="股市"?"stock market trading":n.tag==="個股"?"technology semiconductor chip":"taiwan finance market"),"800x320")}
+                    src={getNewsImgUrl(n.imgQuery,n.cls)}
                     alt={n.title}
                     style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
                     onError={e=>{e.target.style.display="none";}}
