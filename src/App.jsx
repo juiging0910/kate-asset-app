@@ -3016,7 +3016,7 @@ export default function App(){
               </div>
             </div>
             <div className="sub-tabs">
-              {[{id:"qa",label:"🤖 AI 財商"},{id:"tools",label:"📋 項目資訊"},{id:"notifs",label:"🔔 通知"},...(isKate?[{id:"prodmgr",label:"✏️ 產品管理"}]:[])].map(t=>(
+              {[{id:"qa",label:"🤖 AI 財商"},{id:"tools",label:"📋 項目資訊"},{id:"notifs",label:"🔔 通知"},...(isKate?[{id:"picks",label:"✦ 後台推薦"},{id:"prodmgr",label:"✏️ 產品管理"}]:[])].map(t=>(
                 <div key={t.id} className={`st ${advisorSub===t.id?"active":""}`} onClick={()=>setAdvisorSub(t.id)} style={{position:"relative"}}>
                   {t.id==="notifs"&&notifs.filter(n=>n.unread).length>0&&<span style={{position:"absolute",top:4,right:4,minWidth:14,height:14,borderRadius:7,background:"var(--rose)",color:"#fff",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,padding:"0 3px"}}>{notifs.filter(n=>n.unread).length}</span>}
                   {t.label}
