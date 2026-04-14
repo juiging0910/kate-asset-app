@@ -1001,26 +1001,26 @@ export default function App(){
   useEffect(()=>{
     if(!loggedIn)return;
     setIndicesLoading(true);
+    const runAIFallback=()=>{
+      const today=new Date().toLocaleDateString("zh-TW");
+      searchNews(`台灣加權指數 S&P500 那斯達克 Nasdaq 日經225 ${today} 今日收盤點數 最新`)
+        .then(raw=>generateAI(`根據以下市場資訊，找出4個指數今日最新數據。只輸出純JSON，數字要正確：{"indices":[{"name":"台灣加權","val":"","chg":"","up":true},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n今日日期：${today}\n資料：${raw.slice(0,3000)}`,800))
+        .then(raw=>{
+          try{
+            const cleaned=raw.replace(/```json|```/g,"").trim();
+            const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+            if(parsed.indices?.length>0)setLiveIndices(parsed.indices.map(idx=>({...idx,loading:false})));
+          }catch{}
+          setIndicesLoading(false);
+        })
+        .catch(()=>setIndicesLoading(false));
+    };
     fetchAllIndices()
       .then(data=>{
-        if(data.length>0){setLiveIndices(data);}
-        setIndicesLoading(false);
+        if(data.length>0){setLiveIndices(data);setIndicesLoading(false);}
+        else runAIFallback();
       })
-      .catch(()=>{
-        // Fallback: AI search
-        const today=new Date().toLocaleDateString("zh-TW");
-        searchNews(`台灣加權指數 S&P500 那斯達克 Nasdaq 日經225 ${today} 今日收盤點數 最新`)
-          .then(raw=>generateAI(`根據以下市場資訊，找出4個指數今日最新數據。只輸出純JSON，數字要正確：{"indices":[{"name":"台灣加權","val":"","chg":"","up":true},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n今日日期：${today}\n資料：${raw.slice(0,3000)}`,800))
-          .then(raw=>{
-            try{
-              const cleaned=raw.replace(/```json|```/g,"").trim();
-              const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-              if(parsed.indices?.length>0)setLiveIndices(parsed.indices.map(idx=>({...idx,loading:false})));
-            }catch{}
-            setIndicesLoading(false);
-          })
-          .catch(()=>setIndicesLoading(false));
-      });
+      .catch(()=>runAIFallback());
   },[loggedIn]);
 
   useEffect(()=>{
@@ -1092,27 +1092,27 @@ export default function App(){
   const refreshIndices=()=>{
     if(indicesLoading)return;
     setIndicesLoading(true);
+    const runAIFallback=()=>{
+      const todayStr=new Date().toLocaleDateString("zh-TW");
+      searchNews(`台灣加權指數 S&P500 那斯達克 Nasdaq 日經225 ${todayStr} 今日收盤點數 最新`)
+        .then(raw=>generateAI(`根據以下市場資訊，找出4個指數今日最新數據。只輸出純JSON，數字要正確：{"indices":[{"name":"台灣加權","val":"","chg":"","up":true},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n今日日期：${todayStr}\n資料：${raw.slice(0,3000)}`,800))
+        .then(raw=>{
+          try{
+            const cleaned=raw.replace(/```json|```/g,"").trim();
+            const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+            if(data.indices?.length>0){setLiveIndices(data.indices.map(idx=>({...idx,loading:false})));showToast("✓ 指數已更新");}
+            else showToast("⚠ 更新失敗，請稍後再試");
+          }catch{showToast("⚠ 更新失敗，請稍後再試");}
+          setIndicesLoading(false);
+        })
+        .catch(()=>{setIndicesLoading(false);showToast("⚠ 更新失敗");});
+    };
     fetchAllIndices()
       .then(data=>{
-        if(data.length>0){setLiveIndices(data);showToast("✓ 指數已更新（Yahoo Finance）");}
-        else showToast("⚠ 無法取得即時數據");
-        setIndicesLoading(false);
+        if(data.length>0){setLiveIndices(data);showToast("✓ 指數已更新");setIndicesLoading(false);}
+        else runAIFallback();
       })
-      .catch(()=>{
-        // Fallback: AI search
-        const todayStr=new Date().toLocaleDateString("zh-TW");
-        searchNews(`台灣加權指數 S&P500 那斯達克 Nasdaq 日經225 ${todayStr} 今日收盤點數 最新`)
-          .then(raw=>generateAI(`根據以下市場資訊，找出4個指數今日最新數據。只輸出純JSON，數字要正確：{"indices":[{"name":"台灣加權","val":"","chg":"","up":true},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n今日日期：${todayStr}\n資料：${raw.slice(0,3000)}`,800))
-          .then(raw=>{
-            try{
-              const cleaned=raw.replace(/```json|```/g,"").trim();
-              const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-              if(data.indices?.length>0){setLiveIndices(data.indices.map(idx=>({...idx,loading:false})));showToast("✓ 指數已更新");}
-            }catch{showToast("⚠ 更新失敗，請稍後再試");}
-            setIndicesLoading(false);
-          })
-          .catch(()=>{setIndicesLoading(false);showToast("⚠ 更新失敗");});
-      });
+      .catch(()=>runAIFallback());
   };
 
   const handleRegister=async()=>{
