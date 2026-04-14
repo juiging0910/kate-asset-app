@@ -125,6 +125,70 @@ async function fetchAllIndices(){
     return null;
   }).filter(Boolean);
 }
+// ── 新聞主題 SVG 插圖生成 ──
+function getNewsSVG(tag,emoji,cls){
+  const isDark=true;
+  const bg=cls==="tm"?"#0a1828":cls==="ti"?"#100a1a":cls==="tb"?"#0a1a10":"#1a0a0a";
+  const accent=cls==="tm"?"#3a7abf":cls==="ti"?"#7a5abf":cls==="tb"?"#3aaa70":"#c8a84b";
+  const accentDim=cls==="tm"?"rgba(58,122,191,.18)":cls==="ti"?"rgba(122,90,191,.18)":cls==="tb"?"rgba(58,170,112,.18)":"rgba(200,168,75,.18)";
+
+  if(tag==="總經"||cls==="tm"){
+    return`<svg viewBox="0 0 430 240" xmlns="http://www.w3.org/2000/svg" width="100%" height="240" preserveAspectRatio="xMidYMid slice">
+      <rect width="430" height="240" fill="${bg}"/>
+      <circle cx="380" cy="40" r="120" fill="${accentDim}"/>
+      <circle cx="50" cy="200" r="80" fill="${accentDim}" opacity=".5"/>
+      ${[0,1,2,3,4,5,6,7,8,9,10].map((i)=>{
+        const x=30+i*38; const h=40+Math.sin(i*0.9)*50+i*6; const y=200-h;
+        return`<rect x="${x}" y="${y}" width="22" height="${h}" rx="3" fill="${accent}" opacity="${0.3+i*0.06}"/>`;
+      }).join("")}
+      <polyline points="${[0,1,2,3,4,5,6,7,8,9,10].map((i)=>`${41+i*38},${180-30-Math.sin(i*0.9)*50-i*6}`).join(" ")}" fill="none" stroke="${accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+      ${[0,1,2,3,4,5,6,7,8,9,10].map((i)=>`<circle cx="${41+i*38}" cy="${180-30-Math.sin(i*0.9)*50-i*6}" r="3.5" fill="${accent}" opacity=".8"/>`).join("")}
+      <text x="30" y="36" font-family="serif" font-size="42" opacity=".15" fill="white">${emoji}</text>
+    </svg>`;
+  }
+  if(tag==="股市"||tag==="個股"){
+    const pts=[[0,80],[40,65],[80,72],[120,45],[160,55],[200,30],[240,42],[280,20],[320,35],[360,15],[400,25]];
+    return`<svg viewBox="0 0 430 240" xmlns="http://www.w3.org/2000/svg" width="100%" height="240" preserveAspectRatio="xMidYMid slice">
+      <rect width="430" height="240" fill="${bg}"/>
+      <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${accent}" stop-opacity="0.25"/><stop offset="100%" stop-color="${accent}" stop-opacity="0.02"/></linearGradient></defs>
+      <circle cx="360" cy="60" r="100" fill="${accentDim}"/>
+      <path d="M${pts.map(([x,y])=>`${x+15},${y+100}`).join(" L")} L415,240 L15,240 Z" fill="url(#sg)"/>
+      <polyline points="${pts.map(([x,y])=>`${x+15},${y+100}`).join(" ")}" fill="none" stroke="${accent}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pts.map(([x,y],i)=>i%3===0?`<circle cx="${x+15}" cy="${y+100}" r="4" fill="${accent}" opacity=".9"/>`:"").join("")}
+      ${[40,80,120,160,200,240,280,320,360,400].map(x=>`<line x1="${x}" y1="0" x2="${x}" y2="240" stroke="white" stroke-width="0.3" opacity=".06"/>`).join("")}
+      ${[60,100,140,180].map(y=>`<line x1="0" y1="${y}" x2="430" y2="${y}" stroke="white" stroke-width="0.3" opacity=".06"/>`).join("")}
+      <text x="30" y="42" font-family="serif" font-size="42" opacity=".12" fill="white">${emoji}</text>
+    </svg>`;
+  }
+  if(tag==="台灣資產"){
+    return`<svg viewBox="0 0 430 240" xmlns="http://www.w3.org/2000/svg" width="100%" height="240" preserveAspectRatio="xMidYMid slice">
+      <rect width="430" height="240" fill="${bg}"/>
+      <circle cx="215" cy="120" r="160" fill="${accentDim}" opacity=".6"/>
+      <circle cx="215" cy="120" r="100" fill="${accentDim}" opacity=".4"/>
+      <circle cx="215" cy="120" r="50" fill="${accentDim}" opacity=".5"/>
+      ${[0,30,60,90,120,150,180,210,240,270,300,330].map((deg)=>{
+        const r1=55,r2=155,rad=deg*Math.PI/180;
+        return`<line x1="${215+r1*Math.cos(rad)}" y1="${120+r1*Math.sin(rad)}" x2="${215+r2*Math.cos(rad)}" y2="${120+r2*Math.sin(rad)}" stroke="${accent}" stroke-width="0.8" opacity=".2"/>`;
+      }).join("")}
+      <text x="185" y="135" font-family="serif" font-size="52" opacity=".2" fill="white">${emoji}</text>
+      <text x="30" y="36" font-family="serif" font-size="42" opacity=".12" fill="white">🏝️</text>
+    </svg>`;
+  }
+  // default
+  return`<svg viewBox="0 0 430 240" xmlns="http://www.w3.org/2000/svg" width="100%" height="240" preserveAspectRatio="xMidYMid slice">
+    <rect width="430" height="240" fill="${bg}"/>
+    <circle cx="380" cy="30" r="130" fill="${accentDim}"/>
+    <circle cx="60" cy="210" r="90" fill="${accentDim}" opacity=".4"/>
+    ${[0,1,2,3,4].map(i=>`<circle cx="${80+i*70}" cy="${160-i*15}" r="${20+i*5}" fill="${accent}" opacity="${0.08+i*0.04}" />`).join("")}
+    <text x="30" y="42" font-family="serif" font-size="42" opacity=".15" fill="white">${emoji}</text>
+  </svg>`;
+}
+// ── Unsplash 新聞配圖 ──
+function getNewsImgUrl(imgQuery,size="800x400"){
+  const q=encodeURIComponent(imgQuery||"finance market");
+  return`https://source.unsplash.com/${size}/?${q}`;
+}
+
 async function searchNews(query){
   const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AI_HEADERS,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:query}]})});
   const data=await res.json();
@@ -168,14 +232,14 @@ const indices=[
   {name:"日經 225",val:"—",chg:"—",up:true,loading:true},
 ];
 const ALL_NEWS=[
-  {cls:"tm",tag:"總經",emoji:"📊",title:"Fed 暗示年內仍有降息空間，美股三大指數小幅收漲",time:"2小時前",src:"Reuters",body:"美國聯準會官員在最新聲明中暗示，若通膨數據持續回落，年內仍有降息空間。\n\n凱特觀點：此訊號對股債市均屬正面，建議維持現有配置，靜待正式降息確認後再大幅調整。"},
-  {cls:"tm",tag:"總經",emoji:"🏦",title:"美國 3 月 CPI 低於預期，通膨持續降溫信號明確",time:"5小時前",src:"Bloomberg",body:"美國3月消費者物價指數年增3.5%，低於市場預期的3.8%。\n\n凱特觀點：通膨持續降溫有助降息提前，建議增持成長型資產。"},
-  {cls:"tt",tag:"股市",emoji:"📈",title:"標普 500 指數連四週收漲，科技股領軍帶動",time:"3小時前",src:"WSJ",body:"標普500指數連續第四週收漲，AI相關概念股漲幅居前。\n\n凱特觀點：科技股多頭趨勢完整，建議維持核心持股。"},
-  {cls:"tt",tag:"股市",emoji:"💹",title:"輝達財報超預期，AI 晶片需求未見放緩跡象",time:"6小時前",src:"Reuters",body:"輝達EPS超出市場預期20%，AI GPU訂單能見度超過一年。\n\n凱特觀點：台積電、聯發科等供應鏈直接受惠，維持持有評等。"},
-  {cls:"ti",tag:"個股",emoji:"💾",title:"台積電法說會：CoWoS 封裝產能 2026 年大幅擴充",time:"1小時前",src:"工商時報",body:"台積電宣布CoWoS先進封裝產能將在2026年大幅擴充。\n\n凱特觀點：維持目標價1050元，建議持有。"},
-  {cls:"tb",tag:"台灣資產",emoji:"🥇",title:"黃金價格再創歷史新高，突破每盎司 3,300 美元",time:"6小時前",src:"路透社",body:"國際金價突破每盎司3,300美元，年漲幅逾25%。\n\n凱特觀點：持有實體黃金的客戶帳上報酬亮眼，可考慮鎖定部分獲利。"},
-  {cls:"tm",tag:"總經",emoji:"🌏",title:"IMF 上調 2026 全球 GDP 成長預估至 3.2%",time:"8小時前",src:"FT",body:"國際貨幣基金上調今年全球經濟成長預估至3.2%。\n\n凱特觀點：全球成長前景改善，亞洲市場配置機會值得關注。"},
-  {cls:"tb",tag:"台灣資產",emoji:"💱",title:"新台幣兌美元升值至 31.2，出口商適時換匯",time:"4小時前",src:"中央社",body:"新台幣兌美元匯率升至31.2元，創近三個月新高。\n\n凱特觀點：持有美元計價保單者帳上TWD價值略減，屬正常匯率波動。"},
+  {cls:"tm",tag:"總經",emoji:"📊",imgQuery:"federal reserve interest rate economy",title:"Fed 暗示年內仍有降息空間，美股三大指數小幅收漲",time:"2小時前",src:"Reuters",body:"美國聯準會官員在最新聲明中暗示，若通膨數據持續回落，年內仍有降息空間。\n\n凱特觀點：此訊號對股債市均屬正面，建議維持現有配置，靜待正式降息確認後再大幅調整。"},
+  {cls:"tm",tag:"總經",emoji:"🏦",imgQuery:"inflation consumer price index economy",title:"美國 3 月 CPI 低於預期，通膨持續降溫信號明確",time:"5小時前",src:"Bloomberg",body:"美國3月消費者物價指數年增3.5%，低於市場預期的3.8%。\n\n凱特觀點：通膨持續降溫有助降息提前，建議增持成長型資產。"},
+  {cls:"tt",tag:"股市",emoji:"📈",imgQuery:"stock market trading wall street bull",title:"標普 500 指數連四週收漲，科技股領軍帶動",time:"3小時前",src:"WSJ",body:"標普500指數連續第四週收漲，AI相關概念股漲幅居前。\n\n凱特觀點：科技股多頭趨勢完整，建議維持核心持股。"},
+  {cls:"tt",tag:"股市",emoji:"💹",imgQuery:"nvidia AI chip semiconductor technology",title:"輝達財報超預期，AI 晶片需求未見放緩跡象",time:"6小時前",src:"Reuters",body:"輝達EPS超出市場預期20%，AI GPU訂單能見度超過一年。\n\n凱特觀點：台積電、聯發科等供應鏈直接受惠，維持持有評等。"},
+  {cls:"ti",tag:"個股",emoji:"💾",imgQuery:"taiwan semiconductor factory chip manufacturing",title:"台積電法說會：CoWoS 封裝產能 2026 年大幅擴充",time:"1小時前",src:"工商時報",body:"台積電宣布CoWoS先進封裝產能將在2026年大幅擴充。\n\n凱特觀點：維持目標價1050元，建議持有。"},
+  {cls:"tb",tag:"台灣資產",emoji:"🥇",imgQuery:"gold bullion precious metal market",title:"黃金價格再創歷史新高，突破每盎司 3,300 美元",time:"6小時前",src:"路透社",body:"國際金價突破每盎司3,300美元，年漲幅逾25%。\n\n凱特觀點：持有實體黃金的客戶帳上報酬亮眼，可考慮鎖定部分獲利。"},
+  {cls:"tm",tag:"總經",emoji:"🌏",imgQuery:"global economy growth GDP world",title:"IMF 上調 2026 全球 GDP 成長預估至 3.2%",time:"8小時前",src:"FT",body:"國際貨幣基金上調今年全球經濟成長預估至3.2%。\n\n凱特觀點：全球成長前景改善，亞洲市場配置機會值得關注。"},
+  {cls:"tb",tag:"台灣資產",emoji:"💱",imgQuery:"currency exchange rate taiwan dollar",title:"新台幣兌美元升值至 31.2，出口商適時換匯",time:"4小時前",src:"中央社",body:"新台幣兌美元匯率升至31.2元，創近三個月新高。\n\n凱特觀點：持有美元計價保單者帳上TWD價值略減，屬正常匯率波動。"},
 ];
 const katePosts=[
   {id:1,badge:"本週精選",title:"半導體族群低接時機已至，重點留意台積電與聯發科",preview:"外資近三日持續回補，AI 伺服器需求仍強勁。建議分批布局，單次倉位控制在 5% 以內。",body:"近期半導體族群在外資持續買超帶動下，走勢明顯強於大盤。台積電與聯發科作為主要受惠標的，後市仍具相當投資吸引力。\n\n技術面觀察，台積電在880-890元區間獲得強力支撐，目前反彈至905元。\n\n配置建議：可分三批買進，每批建議占整體股票部位的5-7%，並設定-8%的停損線。"},
@@ -1080,8 +1144,20 @@ export default function App(){
     setNewsLoading(true);
     try{
       const raw=await searchNews("台灣股市 美股 全球財經 最新重要新聞 今日");
-      const result=await generateAI(`根據以下新聞，整理5則最重要的財經新聞，輸出純JSON（不加markdown）：{"news":[{"tag":"分類(總經/股市/個股/台灣資產)","emoji":"一個emoji","title":"標題20字內","src":"來源","time":"幾小時前","body":"內文50字加凱特觀點50字，用\n\n分隔"}]}
-新聞資料：${raw.slice(0,3000)}`,800);
+      const today=new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric"});
+      const result=await generateAI(`今天是${today}。根據以下新聞，整理5則最重要的財經新聞。每則新聞的body要豐富完整，包含背景、數據、影響分析和凱特觀點。輸出純JSON（不加markdown）：
+{"news":[{
+  "tag":"分類(總經/股市/個股/台灣資產)",
+  "emoji":"一個emoji",
+  "cls":"tm或tt或ti或tb",
+  "title":"標題20字內",
+  "src":"來源",
+  "time":"幾小時前",
+  "imgQuery":"3-4個英文關鍵字，用於搜尋相關照片，例如：federal reserve interest rate 或 taiwan semiconductor chip 或 gold price market",
+  "body":"第一段：新聞背景與事件描述，80-100字，包含具體數字。\n\n第二段：市場影響與分析，60-80字，說明對台灣投資人的影響。\n\n凱特觀點：以凱特資產管理的視角，給出具體的資產配置建議，60-80字，語氣專業親切。",
+  "keyStats":[{"label":"關鍵數據名稱","value":"數字或百分比"},{"label":"關鍵數據名稱","value":"數字或百分比"}]
+}]}
+新聞資料：${raw.slice(0,4000)}`,1500);
       const cleaned=result.replace(/\`\`\`json|\`\`\`/g,"").trim();
       const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
       if(data.news?.length>0)setLiveNews(data.news);
@@ -1766,17 +1842,58 @@ export default function App(){
   // ─── SUB-SCREENS ───
   if(screen?.type==="news"){
     const n=screen.data;
+    // Split body into paragraphs, detect Kate's view section
+    const paragraphs=(n.body||"").split("\n\n").filter(Boolean);
+    const kateIdx=paragraphs.findIndex(p=>p.startsWith("凱特觀點"));
+    const bodyParas=kateIdx>=0?paragraphs.slice(0,kateIdx):paragraphs;
+    const kateText=kateIdx>=0?paragraphs[kateIdx].replace(/^凱特觀點[：:]\s*/,""):"";
     return(<><style>{S}</style>
       <div className="app"><div className="page" style={{background:"var(--ink)"}}>
         <div style={{position:"relative"}}>
-          <div className="nd-hero" style={{background:n.cls==="tm"?"linear-gradient(135deg,#0a1828,#1a2a0a)":n.cls==="ti"?"linear-gradient(135deg,#100a1a,#0a1028)":"linear-gradient(135deg,#1a0a0a,#0a1028)"}}>
-            <span style={{fontSize:80,position:"relative",zIndex:1}}>{n.emoji}</span>
+          <div className="nd-hero" style={{padding:0,minHeight:260,position:"relative",overflow:"hidden",background:"#1a1008"}}>
+            <img
+              src={getNewsImgUrl(n.imgQuery||(n.tag==="總經"?"federal reserve economy":n.tag==="股市"?"stock market trading":n.tag==="個股"?"technology chip":"taiwan finance"),"900x520")}
+              alt={n.title}
+              style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}
+              onError={e=>{e.target.style.display="none";}}
+            />
             <div className="nd-ov"/>
-            <div className="nd-hcon"><div className="nd-tag">{n.tag}</div><div className="nd-title">{n.title}</div><div className="nd-meta"><span>{n.src}</span><span>{n.time}</span></div></div>
+            <div className="nd-hcon" style={{position:"relative",zIndex:1,padding:"20px 20px 20px"}}>
+              <div className="nd-tag">{n.tag}</div>
+              <div className="nd-title">{n.title}</div>
+              <div className="nd-meta"><span>{n.src}</span><span>{n.time}</span></div>
+            </div>
           </div>
           <div className="back-btn" onClick={()=>setScreen(null)}>← 返回</div>
         </div>
-        <div className="nd-body">{n.body.split("\n\n").map((p,i)=><p key={i}>{p}</p>)}</div>
+        {/* Key Stats */}
+        {n.keyStats?.length>0&&(
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(n.keyStats.length,3)},1fr)`,gap:8,padding:"16px 16px 0"}}>
+            {n.keyStats.map((s,i)=>(
+              <div key={i} style={{background:"var(--card)",border:"1px solid var(--bl)",borderRadius:12,padding:"12px 14px",position:"relative",overflow:"hidden"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${i===0?"#9a7030,#c8a84b":i===1?"#2a5ea8,#5a8ad8":"#2a8a5a,#4aaa80"})`}}/>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"var(--md)",textTransform:"uppercase",marginBottom:5}}>{s.label}</div>
+                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:18,fontWeight:700,color:"var(--td)"}}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Body paragraphs */}
+        <div className="nd-body" style={{paddingBottom:kateText?8:32}}>
+          {bodyParas.map((p,i)=><p key={i}>{p}</p>)}
+        </div>
+        {/* Kate's View */}
+        {kateText&&(
+          <div style={{margin:"0 16px 32px",borderRadius:16,overflow:"hidden",border:"1px solid rgba(200,168,75,.25)"}}>
+            <div style={{background:"linear-gradient(135deg,#1e1005,#2a1808)",padding:"14px 18px 10px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:28,height:28,borderRadius:8,background:"rgba(200,168,75,.15)",border:"1px solid rgba(200,168,75,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>✦</div>
+              <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:3,color:"var(--gold)",textTransform:"uppercase"}}>凱特觀點</div>
+            </div>
+            <div style={{background:"rgba(30,16,5,.6)",padding:"14px 18px 18px"}}>
+              <p style={{fontFamily:"'Noto Serif TC',serif",fontSize:14,color:"rgba(240,230,210,.9)",lineHeight:1.9,margin:0}}>{kateText}</p>
+            </div>
+          </div>
+        )}
       </div></div>
       {toast&&<div className="toast">{toast}</div>}
     </>);
@@ -2044,12 +2161,21 @@ export default function App(){
               </div>
             )}
             {(liveNews.length>0?liveNews:ALL_NEWS).map((n,i)=>(
-              <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})}>
-                <div className="nc-emoji">{n.emoji||"📰"}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div className="nc-tag">{n.tag}</div>
-                  <div className="nc-title">{n.title}</div>
-                  <div className="nc-meta">{n.src} · {n.time}</div>
+              <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})} style={{padding:0,overflow:"hidden",flexDirection:"column",gap:0}}>
+                <div style={{height:160,position:"relative",overflow:"hidden",flexShrink:0,background:"#1a1008"}}>
+                  <img
+                    src={getNewsImgUrl(n.imgQuery||(n.tag==="總經"?"federal reserve economy finance":n.tag==="股市"?"stock market trading":n.tag==="個股"?"technology semiconductor chip":"taiwan finance market"),"800x320")}
+                    alt={n.title}
+                    style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
+                    onError={e=>{e.target.style.display="none";}}
+                  />
+                  <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(20,10,4,.85) 0%,rgba(20,10,4,.1) 60%,transparent 100%)"}}/>
+                  <div style={{position:"absolute",bottom:10,left:12,fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"rgba(240,225,190,.9)",background:"rgba(0,0,0,.35)",padding:"3px 10px",borderRadius:4,textTransform:"uppercase"}}>{n.tag}</div>
+                  <div style={{position:"absolute",top:10,right:12,fontFamily:"'Noto Sans TC',sans-serif",fontSize:10,color:"rgba(240,225,190,.6)"}}>{n.time}</div>
+                </div>
+                <div style={{padding:"12px 14px 14px",background:"var(--card)"}}>
+                  <div style={{fontSize:15,fontWeight:600,color:"var(--td)",lineHeight:1.55,marginBottom:5}}>{n.title}</div>
+                  <div style={{fontSize:11,color:"var(--md)",letterSpacing:.5}}>{n.src}</div>
                 </div>
               </div>
             ))}
