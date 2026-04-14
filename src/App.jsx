@@ -186,33 +186,43 @@ function getNewsSVG(tag,emoji,cls){
 // ── 新聞配圖 ──
 // 根據主題關鍵字映射到 Unsplash 精選圖片 ID（穩定可用）
 const NEWS_IMG_MAP={
-  "federal reserve":"photo-1611974789855-9c2a0a7236a3", // Fed/finance building
+  "federal reserve":"photo-1611974789855-9c2a0a7236a3",
   "interest rate":"photo-1611974789855-9c2a0a7236a3",
-  "inflation":"photo-1549421263-5ec394a5ad4c",           // economy/inflation
-  "economy":"photo-1504868584819-f8e8b4b6d7e3",         // economy chart
-  "stock market":"photo-1611974789855-9c2a0a7236a3",    // stock market
-  "wall street":"photo-1611974789855-9c2a0a7236a3",
-  "semiconductor":"photo-1518770660439-4636190af475",   // chip/semiconductor
+  "inflation":"photo-1549421263-5ec394a5ad4c",
+  "economy":"photo-1504868584819-f8e8b4b6d7e3",
+  "stock market":"photo-1535320903710-d993d3d77d29",
+  "wall street":"photo-1535320903710-d993d3d77d29",
+  "semiconductor":"photo-1518770660439-4636190af475",
   "chip":"photo-1518770660439-4636190af475",
-  "taiwan":"photo-1565967511849-76a60a516170",          // taipei cityscape
-  "gold":"photo-1610375461246-83df859d849d",            // gold bars
-  "currency":"photo-1580519542036-c47de6196ba5",        // currency
-  "nasdaq":"photo-1611974789855-9c2a0a7236a3",
-  "ai":"photo-1677442135703-1787eea5ce01",              // AI/tech
+  "taiwan":"photo-1565967511849-76a60a516170",
+  "gold":"photo-1610375461246-83df859d849d",
+  "currency":"photo-1580519542036-c47de6196ba5",
+  "ai":"photo-1677442135703-1787eea5ce01",
   "nvidia":"photo-1518770660439-4636190af475",
   "gdp":"photo-1504868584819-f8e8b4b6d7e3",
-  "default_tm":"photo-1611974789855-9c2a0a7236a3",      // 總經
-  "default_tt":"photo-1535320903710-d993d3d77d29",      // 股市
-  "default_ti":"photo-1518770660439-4636190af475",      // 個股
-  "default_tb":"photo-1610375461246-83df859d849d",      // 台灣資產
+  "geopolitics":"photo-1586348943529-beaae6c28db9",
+  "war":"photo-1586348943529-beaae6c28db9",
+  "inheritance":"photo-1450101499163-c8848c66ca85",
+  "estate":"photo-1450101499163-c8848c66ca85",
+  "retirement":"photo-1517048676732-d65bc937f952",
+  "pension":"photo-1517048676732-d65bc937f952",
+  "default_tg":"photo-1586348943529-beaae6c28db9",  // 國際局勢
+  "default_ti":"photo-1450101499163-c8848c66ca85",  // 資產傳承
+  "default_tr":"photo-1517048676732-d65bc937f952",  // 退休規劃
+  "default_tt":"photo-1535320903710-d993d3d77d29",  // 投資焦點
+  "default_tm":"photo-1611974789855-9c2a0a7236a3",
+  "default_tb":"photo-1610375461246-83df859d849d",
 };
-function getNewsImgUrl(imgQuery,cls){
+function getNewsImgUrl(imgUrl,imgQuery,cls){
+  // 優先使用 OG image URL
+  if(imgUrl&&imgUrl.startsWith("http"))return imgUrl;
+  // fallback: curated Unsplash
   const q=(imgQuery||"").toLowerCase();
   let id="";
   for(const [key,val] of Object.entries(NEWS_IMG_MAP)){
     if(q.includes(key)){id=val;break;}
   }
-  if(!id) id=NEWS_IMG_MAP[`default_${cls||"tm"}`]||NEWS_IMG_MAP["default_tm"];
+  if(!id) id=NEWS_IMG_MAP[`default_${cls||"tg"}`]||NEWS_IMG_MAP["default_tg"];
   return`https://images.unsplash.com/${id}?w=800&q=75&fit=crop&auto=format`;
 }
 
@@ -259,14 +269,10 @@ const indices=[
   {name:"日經 225",val:"—",chg:"—",up:true,loading:true},
 ];
 const ALL_NEWS=[
-  {cls:"tm",tag:"總經",emoji:"📊",imgQuery:"federal reserve interest rate economy",title:"Fed 暗示年內仍有降息空間，美股三大指數小幅收漲",time:"2小時前",src:"Reuters",body:"美國聯準會官員在最新聲明中暗示，若通膨數據持續回落，年內仍有降息空間。\n\n凱特觀點：此訊號對股債市均屬正面，建議維持現有配置，靜待正式降息確認後再大幅調整。"},
-  {cls:"tm",tag:"總經",emoji:"🏦",imgQuery:"inflation consumer price index economy",title:"美國 3 月 CPI 低於預期，通膨持續降溫信號明確",time:"5小時前",src:"Bloomberg",body:"美國3月消費者物價指數年增3.5%，低於市場預期的3.8%。\n\n凱特觀點：通膨持續降溫有助降息提前，建議增持成長型資產。"},
-  {cls:"tt",tag:"股市",emoji:"📈",imgQuery:"stock market trading wall street bull",title:"標普 500 指數連四週收漲，科技股領軍帶動",time:"3小時前",src:"WSJ",body:"標普500指數連續第四週收漲，AI相關概念股漲幅居前。\n\n凱特觀點：科技股多頭趨勢完整，建議維持核心持股。"},
-  {cls:"tt",tag:"股市",emoji:"💹",imgQuery:"nvidia AI chip semiconductor technology",title:"輝達財報超預期，AI 晶片需求未見放緩跡象",time:"6小時前",src:"Reuters",body:"輝達EPS超出市場預期20%，AI GPU訂單能見度超過一年。\n\n凱特觀點：台積電、聯發科等供應鏈直接受惠，維持持有評等。"},
-  {cls:"ti",tag:"個股",emoji:"💾",imgQuery:"taiwan semiconductor factory chip manufacturing",title:"台積電法說會：CoWoS 封裝產能 2026 年大幅擴充",time:"1小時前",src:"工商時報",body:"台積電宣布CoWoS先進封裝產能將在2026年大幅擴充。\n\n凱特觀點：維持目標價1050元，建議持有。"},
-  {cls:"tb",tag:"台灣資產",emoji:"🥇",imgQuery:"gold bullion precious metal market",title:"黃金價格再創歷史新高，突破每盎司 3,300 美元",time:"6小時前",src:"路透社",body:"國際金價突破每盎司3,300美元，年漲幅逾25%。\n\n凱特觀點：持有實體黃金的客戶帳上報酬亮眼，可考慮鎖定部分獲利。"},
-  {cls:"tm",tag:"總經",emoji:"🌏",imgQuery:"global economy growth GDP world",title:"IMF 上調 2026 全球 GDP 成長預估至 3.2%",time:"8小時前",src:"FT",body:"國際貨幣基金上調今年全球經濟成長預估至3.2%。\n\n凱特觀點：全球成長前景改善，亞洲市場配置機會值得關注。"},
-  {cls:"tb",tag:"台灣資產",emoji:"💱",imgQuery:"currency exchange rate taiwan dollar",title:"新台幣兌美元升值至 31.2，出口商適時換匯",time:"4小時前",src:"中央社",body:"新台幣兌美元匯率升至31.2元，創近三個月新高。\n\n凱特觀點：持有美元計價保單者帳上TWD價值略減，屬正常匯率波動。"},
+  {cls:"tg",tag:"國際局勢",imgQuery:"geopolitics world map conflict",title:"台海局勢升溫，高資產族群加速境外資產布局",time:"2小時前",src:"Reuters",body:"近期台海周邊軍事活動頻繁，解放軍軍機及艦艇繞台次數創近三個月新高。美國國防部隨即重申對台安全承諾，並加速對台軍售審核流程。此波緊張態勢引發國際投資機構重新評估亞太地區風險溢價，台灣相關資產短期承壓。\n\n地緣政治風險升溫直接影響台灣高資產族群的財富保全策略。根據私人銀行業者統計，過去一季台灣客戶境外資產配置需求較上季成長逾40%，香港與新加坡成為最主要目標市場。資產外移趨勢明顯加速，尤其集中在USD 50萬以上的高淨值客戶群。\n\n凱特觀點：地緣政治風險是無法迴避的長期課題。建議高資產客戶以「分散管轄區」為核心策略，透過香港或新加坡分紅保單，將30-50%的可投資資產配置於台灣管轄範圍外，保單身故保障同時具有傳承效益，是兼顧安全與報酬的優先選項。",keyStats:[{label:"境外配置需求",value:"+40%"},{label:"建議境外比例",value:"30-50%"}]},
+  {cls:"ti",tag:"資產傳承",imgQuery:"estate planning inheritance family wealth",title:"台灣遺產稅改革討論再起，信託與保單成最佳工具",time:"4小時前",src:"工商時報",body:"立法院財政委員會最新會期排入遺產稅制改革討論，部分立委提案將最高稅率由20%調升至30%，並縮減壽險免稅上限。現行制度下，壽險保險金不計入遺產，享有3,740萬的基本所得稅免稅額，是台灣高資產家庭最常用的傳承工具之一。若法案通過，現有規劃將需全面檢視。\n\n根據財政部統計，去年台灣遺產稅申報件數年增12%，平均每筆遺產稅額高達NT$ 438萬。遺產稅制的不確定性促使越來越多家庭提前規劃，境外保單因不計入台灣遺產而備受青睞。法律顧問估計，若稅率調升，百億家族每年稅負可能增加逾億元。\n\n凱特觀點：不論稅改結果如何，提早布局永遠優於被動等待。建議客戶善用現行3,740萬壽險免稅額，同時以香港或新加坡保單補足境外傳承缺口。以安達傳承守創V為例，2年繳清後即可鎖定複利增值，兼顧傳承效率與資金彈性。",keyStats:[{label:"壽險免稅上限",value:"NT$3,740萬"},{label:"平均遺產稅額",value:"NT$438萬"}]},
+  {cls:"tr",tag:"退休規劃",imgQuery:"retirement planning savings pension",title:"勞退基金報酬率創新低，自主退休規劃刻不容緩",time:"6小時前",src:"聯合報",body:"勞動部最新公布數據顯示，勞工退休基金今年首季報酬率僅0.8%，遠低於目標的6%年化報酬率，主因全球股市波動加劇與債市承壓。依目前趨勢，勞退基金若無法達標，未來20年將面臨嚴峻的給付缺口壓力，預估缺口達NT$ 9.2兆。對45歲以上的勞工而言，光靠勞退金平均每月僅能領約NT$ 1.7萬，遠不足以維持退休生活品質。\n\n以雙薪家庭每月生活費NT$ 8萬計算，30年退休期間需備妥約NT$ 2,880萬。扣除勞退與勞保，一般上班族的退休缺口高達NT$ 1,500-2,000萬。若不提早規劃，退休後生活水準將大幅下降。理財顧問建議45歲前每月應額外儲備至少NT$ 3-5萬用於退休準備。\n\n凱特觀點：填補退休缺口最有效的工具之一是具有長期複利特性的分紅保單。以蘇黎世瑞駿IUL為例，保底3%上不封頂，五年閉鎖後可月配，非常適合作為退休現金流來源。建議40-55歲客戶，以10-15%的月收入配置境外保單，30年後可累積可觀的退休備糧。",keyStats:[{label:"平均退休缺口",value:"NT$1,500萬+"},{label:"勞退首季報酬",value:"0.8%"}]},
+  {cls:"tt",tag:"投資焦點",imgQuery:"stock market trading screen financial",title:"美股科技股強彈，台積電ADR跟漲2.3%",time:"1小時前",src:"Bloomberg",body:"美國聯準會最新會議紀錄顯示鴿派立場，帶動科技股全面反彈，那斯達克指數單日上漲1.8%，標普500也收復月線。輝達、蘋果、微軟等科技巨頭均上漲逾2%，市場對AI基礎建設持續投資的預期升溫。台積電ADR跟漲2.3%，反映外資對台灣半導體供應鏈的信心恢復。\n\n台股明日開盤預料將同步走強，預估台積電將挑戰1,000元整數關卡。外資期貨部位由淨空翻多，是近三個月最大的一次方向轉換，顯示短線資金面顯著改善。法人分析，若Fed釋放更明確的降息訊號，台股有望突破前高。但需留意美元指數走弱可能帶來的匯率壓力。\n\n凱特觀點：股市反彈提供了檢視整體資產配置的好時機。建議不要因股市上漲而忽略保障型資產的配置。以富衛盈聚天下分紅儲蓄為例，最快第三年回本，保監局推薦，可作為股票部位的穩定壓艙石，在市場波動時提供確定性報酬。",keyStats:[{label:"那斯達克漲幅",value:"+1.8%"},{label:"台積電ADR",value:"+2.3%"}]},
 ];
 const katePosts=[
   {id:1,badge:"本週精選",title:"半導體族群低接時機已至，重點留意台積電與聯發科",preview:"外資近三日持續回補，AI 伺服器需求仍強勁。建議分批布局，單次倉位控制在 5% 以內。",body:"近期半導體族群在外資持續買超帶動下，走勢明顯強於大盤。台積電與聯發科作為主要受惠標的，後市仍具相當投資吸引力。\n\n技術面觀察，台積電在880-890元區間獲得強力支撐，目前反彈至905元。\n\n配置建議：可分三批買進，每批建議占整體股票部位的5-7%，並設定-8%的停損線。"},
@@ -1170,24 +1176,86 @@ export default function App(){
   const fetchHomeNews=async()=>{
     setNewsLoading(true);
     try{
-      const raw=await searchNews("台灣股市 美股 全球財經 最新重要新聞 今日");
-      const today=new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric"});
-      const result=await generateAI(`今天是${today}。根據以下新聞，整理5則最重要的財經新聞。每則新聞的body要豐富完整，包含背景、數據、影響分析和凱特觀點。輸出純JSON（不加markdown）：
-{"news":[{
-  "tag":"分類(總經/股市/個股/台灣資產)",
-  "emoji":"一個emoji",
-  "cls":"tm或tt或ti或tb",
-  "title":"標題20字內",
-  "src":"來源",
-  "time":"幾小時前",
-  "imgQuery":"3-4個英文關鍵字，用於搜尋相關照片，例如：federal reserve interest rate 或 taiwan semiconductor chip 或 gold price market",
-  "body":"第一段：新聞背景與事件描述，80-100字，包含具體數字。\n\n第二段：市場影響與分析，60-80字，說明對台灣投資人的影響。\n\n凱特觀點：以凱特資產管理的視角，給出具體的資產配置建議，60-80字，語氣專業親切。",
-  "keyStats":[{"label":"關鍵數據名稱","value":"數字或百分比"},{"label":"關鍵數據名稱","value":"數字或百分比"}]
-}]}
-新聞資料：${raw.slice(0,4000)}`,1500);
+      const today=new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
+      const todayISO=new Date().toISOString().slice(0,10);
+      // 四大主題分別搜尋
+      const [rawGeo,rawInherit,rawRetire,rawInvest]=await Promise.all([
+        searchNews(`${todayISO} 國際局勢 地緣政治 台海 美中關係 俄烏 中東 最新`),
+        searchNews(`${todayISO} 台灣遺產稅 資產傳承 境外保險 信託 傳承規劃 最新`),
+        searchNews(`${todayISO} 退休規劃 勞退 年金 台灣退休 pension 最新`),
+        searchNews(`${todayISO} 美股 台股 投資 市場焦點 基金 ETF 最新`),
+      ]);
+      const result=await generateAI(`今天是${today}。
+你是凱特資產管理的首席分析師。請根據以下真實新聞，為每個主題各寫一篇深度文章，文章要有凱特獨特觀點，結合當日時事。
+
+輸出純JSON（不加markdown）：
+{"news":[
+  {
+    "tag":"國際局勢",
+    "cls":"tg",
+    "title":"標題，必須包含今日具體事件，20字內",
+    "src":"主要來源媒體名稱",
+    "time":"X小時前",
+    "newsUrl":"如果新聞有提到具體URL則填入，否則填空字串",
+    "body":"第一段（事件背景）：描述今日具體事件，含關鍵人物、地點、數字，100-120字。\n\n第二段（深度分析）：分析此事件對台灣高資產族群的影響，包括資產安全、匯率、地緣風險等，80-100字。\n\n第三段（凱特觀點）：凱特資產管理建議，提到具體的境外資產配置策略（香港、新加坡保單、分散配置），語氣專業親切，80-100字。",
+    "keyStats":[{"label":"關鍵指標","value":"具體數字"},{"label":"關鍵指標","value":"具體數字"}]
+  },
+  {
+    "tag":"資產傳承",
+    "cls":"ti",
+    "title":"標題，必須包含今日具體議題，20字內",
+    "src":"主要來源媒體名稱",
+    "time":"X小時前",
+    "newsUrl":"",
+    "body":"第一段（政策/趨勢背景）：描述遺產稅、信託或傳承相關最新動態，100-120字，含具體稅率、金額。\n\n第二段（影響分析）：說明對台灣高資產家庭的衝擊，包括稅負試算、傳承工具比較，80-100字。\n\n第三段（凱特觀點）：凱特建議透過境外保險做傳承規劃的具體方案，點名適合的產品類型，80-100字。",
+    "keyStats":[{"label":"關鍵數字","value":"具體數字"},{"label":"關鍵數字","value":"具體數字"}]
+  },
+  {
+    "tag":"退休規劃",
+    "cls":"tr",
+    "title":"標題，必須包含今日具體議題，20字內",
+    "src":"主要來源媒體名稱",
+    "time":"X小時前",
+    "newsUrl":"",
+    "body":"第一段（現況背景）：描述台灣退休金制度或市場最新動態，100-120字，含缺口數字。\n\n第二段（影響分析）：說明對不同年齡層的影響，試算退休缺口，80-100字。\n\n第三段（凱特觀點）：建議用分紅保單補足退休缺口的具體策略，含預期報酬，80-100字。",
+    "keyStats":[{"label":"退休缺口","value":"NT$ XXX萬"},{"label":"建議配置","value":"XX%"}]
+  },
+  {
+    "tag":"投資焦點",
+    "cls":"tt",
+    "title":"標題，必須包含今日具體市場事件，20字內",
+    "src":"主要來源媒體名稱",
+    "time":"X小時前",
+    "newsUrl":"",
+    "body":"第一段（市場動態）：描述今日最重要的投資市場事件，含指數點位、個股漲跌、交易量，100-120字。\n\n第二段（趨勢分析）：分析背後邏輯與趨勢，對台灣投資人的啟示，80-100字。\n\n第三段（凱特觀點）：具體的資產配置建議，包括股債比例、保單搭配，80-100字。",
+    "keyStats":[{"label":"關鍵指標","value":"具體數字"},{"label":"漲跌幅","value":"XX%"}]
+  }
+]}
+
+國際局勢新聞：${rawGeo.slice(0,1500)}
+資產傳承新聞：${rawInherit.slice(0,1500)}
+退休規劃新聞：${rawRetire.slice(0,1500)}
+投資焦點新聞：${rawInvest.slice(0,1500)}`,3000);
       const cleaned=result.replace(/\`\`\`json|\`\`\`/g,"").trim();
       const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-      if(data.news?.length>0)setLiveNews(data.news);
+      if(data.news?.length>0){
+        // 嘗試為每則新聞抓 OG image
+        const newsWithImages=await Promise.all(data.news.map(async(n)=>{
+          try{
+            if(n.newsUrl&&n.newsUrl.startsWith("http")){
+              const proxyUrl=`https://api.allorigins.win/get?url=${encodeURIComponent(n.newsUrl)}`;
+              const res=await fetch(proxyUrl,{signal:AbortSignal.timeout(4000)});
+              const json=await res.json();
+              const html=json.contents||"";
+              const ogMatch=html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+                ||html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+              if(ogMatch?.[1])return{...n,imgUrl:ogMatch[1]};
+            }
+          }catch{}
+          return n;
+        }));
+        setLiveNews(newsWithImages);
+      }
     }catch(e){console.error(e);}
     setNewsLoading(false);
   };
@@ -1879,7 +1947,7 @@ export default function App(){
         <div style={{position:"relative"}}>
           <div className="nd-hero" style={{padding:0,minHeight:260,position:"relative",overflow:"hidden",background:"#1a1008"}}>
             <img
-              src={getNewsImgUrl(n.imgQuery,n.cls)}
+              src={getNewsImgUrl(n.imgUrl,n.imgQuery,n.cls)}
               alt={n.title}
               style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}
               onError={e=>{e.target.style.display="none";}}
@@ -2191,7 +2259,7 @@ export default function App(){
               <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})} style={{padding:0,overflow:"hidden",flexDirection:"column",gap:0}}>
                 <div style={{height:160,position:"relative",overflow:"hidden",flexShrink:0,background:"#1a1008"}}>
                   <img
-                    src={getNewsImgUrl(n.imgQuery,n.cls)}
+                    src={getNewsImgUrl(n.imgUrl,n.imgQuery,n.cls)}
                     alt={n.title}
                     style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
                     onError={e=>{e.target.style.display="none";}}
