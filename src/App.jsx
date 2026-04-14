@@ -71,18 +71,21 @@ const PRODUCT_KB_TEXT = PRODUCT_GROUPS.map(g=>
 const THEMES=[{key:"inheritance",label:"傳承規劃",icon:"👨‍👩‍👧‍👦"},{key:"retirement",label:"退休規劃",icon:"🏖️"},{key:"protection",label:"資產保全",icon:"🛡️"},{key:"overseas",label:"海外配置",icon:"🌏"},{key:"tax",label:"節稅規劃",icon:"📋"},{key:"geopolitical",label:"地緣政治",icon:"⚠️"}];
 
 // ── AI helpers ──
+const ANTHROPIC_KEY=import.meta.env.VITE_ANTHROPIC_KEY||"";
+const AI_HEADERS={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+
 async function searchNews(query){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:query}]})});
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AI_HEADERS,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:query}]})});
   const data=await res.json();
   return data.content?.filter(b=>b.type==="text").map(b=>b.text).join("\n")||"";
 }
 async function generateAI(prompt,maxTokens=1500){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})});
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AI_HEADERS,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})});
   const data=await res.json();
   return data.content?.[0]?.text||"";
 }
 async function aiChat(messages,systemPrompt){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:systemPrompt,messages})});
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AI_HEADERS,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:systemPrompt,messages})});
   const data=await res.json();
   return data.content?.[0]?.text||"抱歉，請稍後再試。";
 }
