@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 // ── 產品知識庫 ──
 const DISCLAIMER = "本頁所載產品資訊僅供參考，由凱特資產管理顧問提供，不構成任何投資建議或要約。所有產品均涉及風險，過往表現不代表未來回報。投保前請詳閱相關保單條款，並諮詢您的專屬顧問。";
 
-const PRODUCT_GROUPS = [
+const DEFAULT_PRODUCT_GROUPS = [
   {
     cat:"🇭🇰 香港保險", color:"var(--gold)", dimColor:"var(--gold-dim)", border:"rgba(200,168,75,.22)",
     items:[
@@ -57,16 +57,25 @@ const PRODUCT_GROUPS = [
   },
 ];
 
-const PRODUCT_KB_OBJ = {};
-PRODUCT_GROUPS.forEach(g=>{
-  g.items.forEach(p=>{
-    PRODUCT_KB_OBJ[`${p.company} — ${p.name}`]={region:g.cat,type:p.type,summary:p.notes||p.name,suitable:p.suitable,features:p.tags};
+function buildKB(groups){
+  const obj={};
+  groups.forEach(g=>{
+    (g.items||[]).forEach(p=>{
+      obj[`${p.company} — ${p.name}`]={region:g.cat,type:p.type,summary:p.notes||p.name,suitable:p.suitable,features:p.tags||[]};
+    });
   });
-});
+  return obj;
+}
+function buildKBText(groups){
+  return groups.map(g=>
+    `${g.cat}：${(g.items||[]).map(p=>`${p.company}${p.name}（${p.type}，最低${p.min||"洽詢"}，${(p.tags||[]).join("、")}）`).join("、")}`
+  ).join("。");
+}
+
+// Static versions used before login (fallback)
+const PRODUCT_KB_OBJ = buildKB(DEFAULT_PRODUCT_GROUPS);
 const PRODUCTS_LIST = Object.keys(PRODUCT_KB_OBJ);
-const PRODUCT_KB_TEXT = PRODUCT_GROUPS.map(g=>
-  `${g.cat}：${g.items.map(p=>`${p.company}${p.name}（${p.type}，最低${p.min||"洽詢"}，${p.tags.join("、")}）`).join("、")}`
-).join("。");
+const PRODUCT_KB_TEXT = buildKBText(DEFAULT_PRODUCT_GROUPS);
 
 const THEMES=[{key:"inheritance",label:"傳承規劃",icon:"👨‍👩‍👧‍👦"},{key:"retirement",label:"退休規劃",icon:"🏖️"},{key:"protection",label:"資產保全",icon:"🛡️"},{key:"overseas",label:"海外配置",icon:"🌏"},{key:"tax",label:"節稅規劃",icon:"📋"},{key:"geopolitical",label:"地緣政治",icon:"⚠️"}];
 
@@ -111,10 +120,10 @@ const stocks=[
   {icon:"🏗️",name:"中鋼",code:"2002.TW",price:"26.90",chg:"-0.74%",up:false,open:"27.10",high:"27.20",low:"26.80",vol:"15.8M",mktcap:"218B"},
 ];
 const indices=[
-  {name:"台灣加權",val:"35,457",chg:"+0.11%",up:true},
-  {name:"S&P 500",val:"6,824",chg:"+0.11%",up:true},
-  {name:"那斯達克",val:"22,982",chg:"+0.34%",up:true},
-  {name:"日經 225",val:"56,503",chg:"-0.74%",up:false},
+  {name:"台灣加權",val:"—",chg:"—",up:true,loading:true},
+  {name:"S&P 500",val:"—",chg:"—",up:true,loading:true},
+  {name:"那斯達克",val:"—",chg:"—",up:true,loading:true},
+  {name:"日經 225",val:"—",chg:"—",up:true,loading:true},
 ];
 const ALL_NEWS=[
   {cls:"tm",tag:"總經",emoji:"📊",title:"Fed 暗示年內仍有降息空間，美股三大指數小幅收漲",time:"2小時前",src:"Reuters",body:"美國聯準會官員在最新聲明中暗示，若通膨數據持續回落，年內仍有降息空間。\n\n凱特觀點：此訊號對股債市均屬正面，建議維持現有配置，靜待正式降息確認後再大幅調整。"},
@@ -830,6 +839,15 @@ export default function App(){
   const [letterType,setLetterType]=useState("referral");
   const [letterResult,setLetterResult]=useState("");
   const [letterLoading,setLetterLoading]=useState(false);
+  // Product groups (editable by Kate)
+  const [productGroups,setProductGroups]=useState(DEFAULT_PRODUCT_GROUPS);
+  const [showProdEditor,setShowProdEditor]=useState(false);
+  const [prodEditorGroupIdx,setProdEditorGroupIdx]=useState(0);
+  const [prodEditorItemIdx,setProdEditorItemIdx]=useState(null); // null = new
+  const PROD_BLANK={company:"",name:"",country:"香港",type:"分紅保單",min:"",payTerms:["躉繳優惠","2年","5年"],breakeven:"",irr:"",tags:[],suitable:"",notes:""};
+  const [prodForm,setProdForm]=useState(PROD_BLANK);
+  const [prodFormTagInput,setProdFormTagInput]=useState("");
+  const [prodFormTermInput,setProdFormTermInput]=useState("");
   // Advisor / Picks
   const [picksStep,setPicksStep]=useState("idle");
   const [selectedThemes,setSelectedThemes]=useState(["inheritance","geopolitical"]);
@@ -840,6 +858,7 @@ export default function App(){
   const [draftProds,setDraftProds]=useState([]);
   const [draftTheme,setDraftTheme]=useState("");
   const [publishedPicks,setPublishedPicks]=useState(null);
+  const [publishedArticles,setPublishedArticles]=useState([]);  // 存到 Supabase 的文章清單
   // Messenger
   const [showMsg,setShowMsg]=useState(false);
   const [msgThread,setMsgThread]=useState([
@@ -940,14 +959,15 @@ export default function App(){
   useEffect(()=>{
     if(!loggedIn)return;
     setIndicesLoading(true);
-    searchNews("台灣加權指數 S&P500 那斯達克 日經225 今日最新收盤點數 漲跌幅")
-      .then(raw=>generateAI(`根據以下市場資訊，整理4個指數的最新數據，輸出純JSON（不加markdown）：{"indices":[{"name":"台灣加權","val":"點數數字加逗號","chg":"+/-百分比%","up":true或false},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n資料：${raw.slice(0,2000)}`,600))
+    const today=new Date().toLocaleDateString("zh-TW");
+    searchNews(`台灣加權指數 S&P500 那斯達克 Nasdaq 日經225 ${today} 今日收盤點數 最新`)
+      .then(raw=>generateAI(`根據以下市場資訊，找出4個指數今日最新數據。只輸出純JSON，數字要正確：{"indices":[{"name":"台灣加權","val":"如21430","chg":"如+1.20%","up":true},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n今日日期：${today}\n資料：${raw.slice(0,3000)}`,800))
       .then(raw=>{
         try{
           const cleaned=raw.replace(/```json|```/g,"").trim();
           const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-          if(data.indices?.length>0)setLiveIndices(data.indices);
-        }catch{}
+          if(data.indices?.length>0)setLiveIndices(data.indices.map(idx=>({...idx,loading:false})));
+        }catch{console.error("indices parse error");}
         setIndicesLoading(false);
       })
       .catch(()=>setIndicesLoading(false));
@@ -996,13 +1016,14 @@ export default function App(){
   const refreshIndices=()=>{
     if(indicesLoading)return;
     setIndicesLoading(true);
-    searchNews("台灣加權指數 S&P500 那斯達克 日經225 今日最新收盤點數 漲跌幅")
-      .then(raw=>generateAI(`根據以下市場資訊，整理4個指數的最新數據，輸出純JSON（不加markdown）：{"indices":[{"name":"台灣加權","val":"點數數字加逗號","chg":"+/-百分比%","up":true或false},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n資料：${raw.slice(0,2000)}`,600))
+    const todayStr=new Date().toLocaleDateString("zh-TW");
+    searchNews(`台灣加權指數 S&P500 那斯達克 Nasdaq 日經225 ${todayStr} 今日收盤點數 最新`)
+      .then(raw=>generateAI(`根據以下市場資訊，找出4個指數今日最新數據。只輸出純JSON，數字要正確：{"indices":[{"name":"台灣加權","val":"如35457","chg":"如+0.11%","up":true},{"name":"S&P 500","val":"","chg":"","up":true},{"name":"那斯達克","val":"","chg":"","up":true},{"name":"日經 225","val":"","chg":"","up":true}]}\n今日日期：${todayStr}\n資料：${raw.slice(0,3000)}`,800))
       .then(raw=>{
         try{
           const cleaned=raw.replace(/```json|```/g,"").trim();
           const data=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-          if(data.indices?.length>0){setLiveIndices(data.indices);showToast("✓ 指數已更新");}
+          if(data.indices?.length>0){setLiveIndices(data.indices.map(idx=>({...idx,loading:false})));showToast("✓ 指數已更新");}
         }catch{showToast("⚠ 更新失敗，請稍後再試");}
         setIndicesLoading(false);
       })
@@ -1058,6 +1079,10 @@ export default function App(){
         if(reData&&reData.length>0)setRealEstateHoldings(reData);
         if(hlthData)setHealthScore(hlthData);
         if(onbData&&onbData.length>0)setOnboardingList(onbData);
+        const artData=await loadUserData(localUser.id,"kate_articles");
+        if(artData&&artData.length>0){setPublishedArticles(artData);setPublishedPicks(artData[0]);}
+        const prodData=await loadUserData("local-kate","kate_products");
+        if(prodData&&prodData.length>0)setProductGroups(prodData);
       }catch(e){console.error("Supabase load error",e);}
       setLoggedIn(true);setLoginLoading(false);return;
     }
@@ -1087,6 +1112,12 @@ export default function App(){
         const onbData=await loadUserData(user.id,"onboarding_clients");
         if(onbData&&onbData.length>0)setOnboardingList(onbData);
       }
+      // 讀取已發布文章
+      const artData=await loadUserData(user.id,"kate_articles");
+      if(artData&&artData.length>0){setPublishedArticles(artData);setPublishedPicks(artData[0]);}
+      // 讀取產品資料（Kate 帳號，所有用戶共用）
+      const prodData=await loadUserData("local-kate","kate_products");
+      if(prodData&&prodData.length>0)setProductGroups(prodData);
       setLoggedIn(true);
     }catch(err){
       setLoginError("帳號或密碼錯誤");
@@ -1473,21 +1504,54 @@ export default function App(){
   // ── Picks ──
   const toggleTheme=(key)=>setSelectedThemes(p=>p.includes(key)?p.filter(k=>k!==key):[...p,key]);
   const handleGenerate=async()=>{
-    if(!selectedThemes.length)return;setPicksStep("loading");
+    if(!selectedThemes.length)return;
+    setPicksStep("loading");
     const labels=selectedThemes.map(k=>THEMES.find(t=>t.key===k)?.label).join("、");
-    setLoadingStep("搜尋相關時事新聞…");
-    const newsRaw=await searchNews(`Search for the latest news today related to: ${labels}, 台灣遺產稅, 傳承規劃, 地緣政治風險, 退休金, 海外資產配置, 節稅. Include both global and Taiwan news. Summarize 4-5 most relevant recent news items in Traditional Chinese.`);
-    setLoadingStep("整理市場動態…");
-    let parsed;
-    try{parsed=JSON.parse((await generateAI(`根據以下新聞整理成JSON（只輸出JSON）：{"news":[{"tag":"分類","title":"標題20字內","desc":"摘要40字內","color":"gold/rose/blue/green"}],"mainTheme":"主題10字內","marketContext":"背景50字內"}\n新聞：${newsRaw.slice(0,2000)}`)).replace(/```json|```/g,"").trim());}
-    catch{parsed={news:[{tag:"傳承",title:"台灣遺產稅改革討論持續",desc:"立法院就遺產稅率調整展開討論",color:"gold"},{tag:"地緣政治",title:"台海情勢牽動亞太資金流向",desc:"不確定性促使高淨值客戶加速資產分散",color:"rose"}],mainTheme:"傳承與地緣政治避險",marketContext:"高資產客戶面臨稅改與地緣政治雙重壓力"};}
-    setPicksNewsItems(parsed.news||[]);setLoadingStep("結合產品知識庫生成凱特建議…");
-    let rec;
-    try{rec=JSON.parse((await generateAI(`你是凱特資產管理的頂級財富顧問。今日主題：「${parsed.mainTheme}」。背景：${parsed.marketContext}。客戶關注：${labels}。\n${PRODUCT_KB_TEXT}\n\n輸出純JSON：{"title":"推薦標題25字內","body":"凱特觀點180字內，結合時事，不要列點","theme":"主題標籤8字內","products":[{"rank":"首選","name":"產品名稱","region":"地區","reason":"50字內"},{"rank":"次選","name":"","region":"","reason":""},{"rank":"補充","name":"","region":"","reason":""}]}`)).replace(/```json|```/g,"").trim());}
-    catch{rec={title:"遺產稅改革在即，境外傳承規劃刻不容緩",body:"台灣遺產稅改革討論持續升溫，疊加台海地緣政治不確定性，越來越多高資產家庭選擇將資產提前配置於境外，透過香港或新加坡的分紅終身壽險進行傳承規劃。保單身故保障在多數地區不計入遺產，可有效規避稅務風險。建議以2-3年為配置周期，分批布局香港與新加坡市場。",theme:"傳承・地緣政治",products:[{rank:"首選",name:"富衛 — 盈聚天下II",region:"🇧🇲 百慕達",reason:"8種貨幣配置分散地緣風險，富傳家3代傳承，2026年推廣折扣最高19%。"},{rank:"次選",name:"安達 — 傳承守創V",region:"🇭🇰 香港",reason:"2年繳清，第3年回本，護家保200%保障，快速完成傳承布局。"},{rank:"補充",name:"AIA — 百樂財富永傳",region:"🇸🇬 新加坡",reason:"新加坡監管完善，地緣政治避險的理想境外配置地點。"}]};}
-    setDraftTitle(rec.title);setDraftBody(rec.body);setDraftProds(rec.products||[]);setDraftTheme(rec.theme||"");setPicksStep("draft");
+    try{
+      setLoadingStep("搜尋相關時事新聞…");
+      const newsRaw=await searchNews(`Search for the latest news today related to: ${labels}, 台灣遺產稅, 傳承規劃, 地緣政治風險, 退休金, 海外資產配置, 節稅. Include both global and Taiwan news. Summarize 4-5 most relevant recent news items in Traditional Chinese.`);
+      setLoadingStep("整理市場動態…");
+      let parsed;
+      try{
+        const raw1=await generateAI(`根據以下新聞整理成JSON（只輸出JSON）：{"news":[{"tag":"分類","title":"標題20字內","desc":"摘要40字內","color":"gold/rose/blue/green"}],"mainTheme":"主題10字內","marketContext":"背景50字內"}\n新聞：${newsRaw.slice(0,2000)}`);
+        const c1=raw1.replace(/```json|```/g,"").trim();
+        parsed=JSON.parse(c1.slice(c1.indexOf("{"),c1.lastIndexOf("}")+1));
+      }catch{
+        parsed={news:[{tag:"傳承",title:"台灣遺產稅改革討論持續",desc:"立法院就遺產稅率調整展開討論",color:"gold"},{tag:"地緣政治",title:"台海情勢牽動亞太資金流向",desc:"不確定性促使高淨值客戶加速資產分散",color:"rose"}],mainTheme:"傳承與地緣政治避險",marketContext:"高資產客戶面臨稅改與地緣政治雙重壓力"};
+      }
+      setPicksNewsItems(parsed.news||[]);
+      setLoadingStep("結合產品知識庫生成凱特建議…");
+      let rec;
+      try{
+        const raw2=await generateAI(`你是凱特資產管理的頂級財富顧問。今日主題：「${parsed.mainTheme}」。背景：${parsed.marketContext}。客戶關注：${labels}。\n${buildKBText(productGroups)}\n\n輸出純JSON：{"title":"推薦標題25字內","body":"凱特觀點180字內，結合時事，不要列點","theme":"主題標籤8字內","products":[{"rank":"首選","name":"產品名稱","region":"地區","reason":"50字內"},{"rank":"次選","name":"","region":"","reason":""},{"rank":"補充","name":"","region":"","reason":""}]}`);
+        const c2=raw2.replace(/```json|```/g,"").trim();
+        rec=JSON.parse(c2.slice(c2.indexOf("{"),c2.lastIndexOf("}")+1));
+      }catch{
+        rec={title:"遺產稅改革在即，境外傳承規劃刻不容緩",body:"台灣遺產稅改革討論持續升溫，疊加台海地緣政治不確定性，越來越多高資產家庭選擇將資產提前配置於境外，透過香港或新加坡的分紅終身壽險進行傳承規劃。保單身故保障在多數地區不計入遺產，可有效規避稅務風險。建議以2-3年為配置周期，分批布局香港與新加坡市場。",theme:"傳承・地緣政治",products:[{rank:"首選",name:"富衛FWD — 盈聚天下 分紅儲蓄",region:"🇭🇰 香港",reason:"最快第三年回本，8種貨幣靈活配置，保監局推薦五星級。"},{rank:"次選",name:"安達 — 傳承守創V",region:"🇭🇰 香港",reason:"2年繳清第5年回本，折扣最多，快速完成傳承布局。"},{rank:"補充",name:"AIA友邦 — PIW百樂財富永傳",region:"🇸🇬 新加坡",reason:"新加坡監管完善，地緣政治避險的理想境外配置地點。"}]};
+      }
+      setDraftTitle(rec.title);
+      setDraftBody(rec.body);
+      setDraftProds(rec.products||[]);
+      setDraftTheme(rec.theme||"");
+      setPicksStep("draft");
+    }catch(err){
+      console.error("handleGenerate error",err);
+      showToast("⚠ 生成失敗，請稍後再試");
+      setPicksStep("idle");
+    }
   };
-  const handlePublishPicks=()=>{setPublishedPicks({title:draftTitle,body:draftBody,products:draftProds,theme:draftTheme,news:picksNewsItems,publishedAt:new Date().toLocaleDateString("zh-TW")});setPicksStep("published");showToast("✓ 已發布至客戶推薦頁");};
+  const handlePublishPicks=async()=>{
+    const article={id:Date.now(),title:draftTitle,body:draftBody,products:draftProds,theme:draftTheme,news:picksNewsItems,publishedAt:new Date().toLocaleDateString("zh-TW"),createdAt:new Date().toISOString()};
+    const newArticles=[article,...publishedArticles];
+    setPublishedPicks(article);
+    setPublishedArticles(newArticles);
+    setPicksStep("published");
+    showToast("✓ 已發布至首頁文章精選");
+    if(currentUser){
+      try{await saveUserData(currentUser.id,"kate_articles",newArticles);}
+      catch(e){console.error("文章儲存失敗",e);}
+    }
+  };
   const resetPicks=()=>{setPicksStep("idle");setPicksNewsItems([]);setDraftTitle("");setDraftBody("");setDraftProds([]);};
 
   // ── QA ──
@@ -1641,11 +1705,26 @@ export default function App(){
       <div className="app"><div className="page" style={{background:"var(--ink)"}}>
         <div style={{minHeight:220,background:"linear-gradient(135deg,#0a1828 0%,#1a0a28 50%,#0a1018 100%)",position:"relative",padding:"52px 20px 24px",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
           <div className="back-btn" onClick={()=>setScreen(null)}>← 返回</div>
-          <div className="kt-badge" style={{marginBottom:10}}>✦ {k.badge}</div>
+          <div className="kt-badge" style={{marginBottom:10}}>✦ {k.badge||k.theme||"凱特觀點"}</div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:"#f0f2f8",lineHeight:1.4}}>{k.title}</div>
-          <div style={{fontSize:11,color:"rgba(240,242,248,.38)",marginTop:8}}>凱特 · 2026年4月5日</div>
+          <div style={{fontSize:11,color:"rgba(240,242,248,.38)",marginTop:8}}>凱特 · {k.publishedAt||new Date().toLocaleDateString("zh-TW")}</div>
         </div>
-        <div className="nd-body">{k.body.split("\n\n").map((p,i)=><p key={i}>{p}</p>)}</div>
+        <div className="nd-body">{(k.body||"").split("\n\n").map((p,i)=><p key={i}>{p}</p>)}</div>
+        {k.products?.length>0&&(
+          <div style={{padding:"0 16px 24px"}}>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:3,color:"var(--gold)",textTransform:"uppercase",marginBottom:12,marginTop:4}}>推薦配置產品</div>
+            {k.products.map((prod,i)=>(
+              <div key={i} style={{background:"var(--card)",border:"1px solid var(--bl)",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,padding:"2px 8px",borderRadius:10,background:i===0?"rgba(200,168,75,.12)":i===1?"rgba(90,104,120,.12)":"rgba(176,80,96,.12)",color:i===0?"#8a5e18":i===1?"#5a6878":"#b05060",border:`1px solid ${i===0?"rgba(200,168,75,.3)":i===1?"rgba(90,104,120,.3)":"rgba(176,80,96,.3)"}`}}>{prod.rank}</div>
+                  <div style={{fontFamily:"'Noto Serif TC',serif",fontSize:13,fontWeight:600,color:"var(--td)",flex:1}}>{prod.name}</div>
+                </div>
+                <div style={{fontSize:12,color:"var(--md)",lineHeight:1.65}}>{prod.reason}</div>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"var(--md)",marginTop:8}}>{prod.region}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div></div>
     </>);
   }
@@ -1727,7 +1806,7 @@ export default function App(){
           ))}
         </div>
       </div></div>
-      {showMsg&&<MessengerOverlay msgThread={msgThread} msgInput={msgInput} setMsgInput={setMsgInput} msgLoading={msgLoading} showProdMenu={showProdMenu} handleMsgSend={handleMsgSend} handleQuick={handleQuick} handleProductSelect={handleProductSelect} onClose={()=>setShowMsg(false)} threadRef={threadRef}/>}
+      {showMsg&&<MessengerOverlay msgThread={msgThread} msgInput={msgInput} setMsgInput={setMsgInput} msgLoading={msgLoading} showProdMenu={showProdMenu} handleMsgSend={handleMsgSend} handleQuick={handleQuick} handleProductSelect={handleProductSelect} onClose={()=>setShowMsg(false)} threadRef={threadRef} productGroups={productGroups}/>}
     </>);
   }
 
@@ -1769,7 +1848,13 @@ export default function App(){
               </button>
             </div>
             <div className="idx" style={{margin:"0 16px 12px"}}>
-              {liveIndices.map((m,i)=><div className="ii" key={i}><div className="ii-n">{m.name}</div><div className="ii-v">{m.val}</div><div className={`ii-c ${m.up?"up":"dn"}`}>{m.chg}</div></div>)}
+              {liveIndices.map((m,i)=>(
+                <div className="ii" key={i}>
+                  <div className="ii-n">{m.name}</div>
+                  <div className="ii-v" style={{opacity:m.loading?0.35:1}}>{m.val}</div>
+                  <div className={`ii-c ${m.up?"up":"dn"}`} style={{opacity:m.loading?0.35:1}}>{m.loading?"載入中…":m.chg}</div>
+                </div>
+              ))}
             </div>
 
             {/* 黃金白銀 */}
@@ -1800,16 +1885,27 @@ export default function App(){
               ))}
             </div>
 
-            {/* 凱特最新發布 */}
-            {publishedPicks&&(
+            {/* 凱特文章精選 */}
+            {publishedArticles.length>0&&(
               <>
-                <div className="sec">凱特最新觀點</div>
-                <div style={{margin:"0 16px 12px",background:"linear-gradient(135deg,#1e1005 0%,#2a1208 50%,#1a0e06 100%)",border:"1px solid rgba(200,168,75,.25)",borderRadius:16,padding:16,cursor:"pointer"}} onClick={()=>setScreen({type:"article",data:publishedPicks})}>
-                  <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:"var(--gold)",textTransform:"uppercase",marginBottom:8}}>✦ 最新發布 · {publishedPicks.publishedAt||"今日"}</div>
-                  <div style={{fontFamily:"'Noto Serif TC',serif",fontSize:15,fontWeight:600,color:"#f5ead8",lineHeight:1.5,marginBottom:8}}>{publishedPicks.title}</div>
-                  <div style={{fontSize:13,color:"rgba(245,234,216,.55)",lineHeight:1.7}}>{(publishedPicks.body||"").slice(0,80)}…</div>
+                <div className="sec">凱特文章精選</div>
+                {/* 最新一篇：大卡片 */}
+                <div style={{margin:"0 16px 10px",background:"linear-gradient(135deg,#1e1005 0%,#2a1208 50%,#1a0e06 100%)",border:"1px solid rgba(200,168,75,.25)",borderRadius:16,padding:16,cursor:"pointer"}} onClick={()=>setScreen({type:"article",data:publishedArticles[0]})}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:2,color:"var(--gold)",textTransform:"uppercase",marginBottom:8}}>✦ 最新觀點 · {publishedArticles[0].publishedAt||"今日"}</div>
+                  <div style={{fontFamily:"'Noto Serif TC',serif",fontSize:16,fontWeight:600,color:"#f5ead8",lineHeight:1.5,marginBottom:8}}>{publishedArticles[0].title}</div>
+                  <div style={{fontSize:13,color:"rgba(245,234,216,.6)",lineHeight:1.7}}>{(publishedArticles[0].body||"").slice(0,80)}…</div>
                   <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--gold)",marginTop:10}}>閱讀全文 →</div>
                 </div>
+                {/* 其他文章：小卡片 */}
+                {publishedArticles.slice(1,3).map((art,i)=>(
+                  <div key={art.id||i} style={{margin:"0 16px 8px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:12,padding:"14px 16px",cursor:"pointer",display:"flex",gap:12,alignItems:"center"}} onClick={()=>setScreen({type:"article",data:art})}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"var(--gold)",marginBottom:4}}>{art.theme||"凱特觀點"} · {art.publishedAt}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:"var(--td)",lineHeight:1.4}}>{art.title}</div>
+                    </div>
+                    <div style={{color:"var(--md)",fontSize:16,flexShrink:0}}>›</div>
+                  </div>
+                ))}
               </>
             )}
 
@@ -1835,7 +1931,7 @@ export default function App(){
                 <div style={{textAlign:"center",fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:2,color:"rgba(245,225,185,.3)",marginTop:8}}>正在抓取最新新聞…</div>
               </div>
             )}
-            {(liveNews.length>0?liveNews:liveNews).map((n,i)=>(
+            {(liveNews.length>0?liveNews:ALL_NEWS).map((n,i)=>(
               <div className="news-card" key={i} onClick={()=>setScreen({type:"news",data:n})}>
                 <div className="nc-emoji">{n.emoji||"📰"}</div>
                 <div style={{flex:1,minWidth:0}}>
@@ -2676,12 +2772,12 @@ export default function App(){
                         <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",letterSpacing:1}}>現金價值 (USD)</div>
                         <div/>
                         {irrForm.rows.map((row,i)=>(
-                          <>
-                            <div key={`n${i}`} style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"var(--md)",textAlign:"center"}}>{i+1}</div>
-                            <input key={`y${i}`} className="calc-inp" type="number" placeholder="例：5" value={row.year} onChange={e=>setIrrForm(p=>({...p,rows:p.rows.map((r,j)=>j===i?{...r,year:e.target.value}:r)}))} style={{padding:"10px 12px",fontSize:14}}/>
-                            <input key={`v${i}`} className="calc-inp" type="number" placeholder="例：55000" value={row.value} onChange={e=>setIrrForm(p=>({...p,rows:p.rows.map((r,j)=>j===i?{...r,value:e.target.value}:r)}))} style={{padding:"10px 12px",fontSize:14}}/>
-                            <button key={`d${i}`} onClick={()=>setIrrForm(p=>({...p,rows:p.rows.filter((_,j)=>j!==i)}))} style={{width:28,height:28,borderRadius:8,border:"1px solid rgba(176,80,96,.2)",background:"transparent",color:"#b05060",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                          </>
+                          <React.Fragment key={i}>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"var(--md)",textAlign:"center"}}>{i+1}</div>
+                            <input className="calc-inp" type="number" placeholder="例：5" value={row.year} onChange={e=>setIrrForm(p=>({...p,rows:p.rows.map((r,j)=>j===i?{...r,year:e.target.value}:r)}))} style={{padding:"10px 12px",fontSize:14}}/>
+                            <input className="calc-inp" type="number" placeholder="例：55000" value={row.value} onChange={e=>setIrrForm(p=>({...p,rows:p.rows.map((r,j)=>j===i?{...r,value:e.target.value}:r)}))} style={{padding:"10px 12px",fontSize:14}}/>
+                            <button onClick={()=>setIrrForm(p=>({...p,rows:p.rows.filter((_,j)=>j!==i)}))} style={{width:28,height:28,borderRadius:8,border:"1px solid rgba(176,80,96,.2)",background:"transparent",color:"#b05060",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                          </React.Fragment>
                         ))}
                       </div>
                       <button className="calc-btn" onClick={calcIRR} style={{marginTop:8}}>計算 IRR →</button>
@@ -2842,7 +2938,7 @@ export default function App(){
               </div>
             </div>
             <div className="sub-tabs">
-              {[{id:"qa",label:"🤖 AI 財商"},{id:"tools",label:"📋 項目資訊"},{id:"notifs",label:"🔔 通知"}].map(t=>(
+              {[{id:"qa",label:"🤖 AI 財商"},{id:"tools",label:"📋 項目資訊"},{id:"notifs",label:"🔔 通知"},...(isKate?[{id:"prodmgr",label:"✏️ 產品管理"}]:[])].map(t=>(
                 <div key={t.id} className={`st ${advisorSub===t.id?"active":""}`} onClick={()=>setAdvisorSub(t.id)} style={{position:"relative"}}>
                   {t.id==="notifs"&&notifs.filter(n=>n.unread).length>0&&<span style={{position:"absolute",top:4,right:4,minWidth:14,height:14,borderRadius:7,background:"var(--rose)",color:"#fff",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,padding:"0 3px"}}>{notifs.filter(n=>n.unread).length}</span>}
                   {t.label}
@@ -3149,6 +3245,31 @@ export default function App(){
                       )}
                       {picksStep==="published"&&<button className="gen-btn" style={{marginTop:12}} onClick={resetPicks}>重新搜尋生成</button>}
                     </div>
+
+                    {/* 已發布文章管理 */}
+                    {publishedArticles.length>0&&(
+                      <>
+                        <div className="sec">已發布文章（{publishedArticles.length} 篇）</div>
+                        {publishedArticles.map((art,i)=>(
+                          <div key={art.id||i} style={{margin:"0 16px 8px",background:"var(--card)",border:"1px solid var(--bl)",borderRadius:12,padding:"14px 16px"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"var(--gold)",marginBottom:4}}>{art.publishedAt} · {art.theme||"凱特觀點"}</div>
+                                <div style={{fontSize:13,fontWeight:600,color:"var(--td)",lineHeight:1.4,marginBottom:4}}>{art.title}</div>
+                                <div style={{fontSize:11,color:"var(--md)"}}>{(art.body||"").slice(0,60)}…</div>
+                              </div>
+                              <button onClick={()=>{
+                                const next=publishedArticles.filter((_,j)=>j!==i);
+                                setPublishedArticles(next);
+                                setPublishedPicks(next[0]||null);
+                                if(currentUser)saveUserData(currentUser.id,"kate_articles",next).catch(console.error);
+                                showToast("✓ 文章已刪除");
+                              }} style={{flexShrink:0,padding:"5px 10px",borderRadius:8,border:"1px solid rgba(176,80,96,.2)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:9,color:"#b05060",cursor:"pointer"}}>刪除</button>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </>
                 )}
 
@@ -3199,7 +3320,7 @@ export default function App(){
             {/* ─ 投資工具 ─ */}
             {advisorSub==="tools"&&(
               <div style={{paddingTop:8}}>
-                {PRODUCT_GROUPS.map((group,gi)=>(
+                {productGroups.map((group,gi)=>(
                   <div key={gi}>
                     <div className="sec">{group.cat}</div>
                     {group.comingSoon?(
@@ -3452,6 +3573,66 @@ export default function App(){
               </div>
             )}
 
+            {/* ─ 產品管理（Kate 後台）─ */}
+            {advisorSub==="prodmgr"&&isKate&&(
+              <div style={{paddingTop:8,paddingBottom:40}}>
+                {productGroups.map((group,gi)=>(
+                  <div key={gi}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"0 16px",paddingTop:14,paddingBottom:8}}>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:3,color:"var(--gold)",textTransform:"uppercase"}}>{group.cat}</div>
+                      <button onClick={()=>{
+                        setProdEditorGroupIdx(gi);
+                        setProdEditorItemIdx(null);
+                        setProdForm({...PROD_BLANK});
+                        setProdFormTagInput("");setProdFormTermInput("");
+                        setShowProdEditor(true);
+                      }} style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"#2a8a5a",background:"rgba(42,138,90,.1)",border:"1px solid rgba(42,138,90,.25)",borderRadius:16,padding:"4px 12px",cursor:"pointer"}}>＋ 新增產品</button>
+                    </div>
+                    {(group.items||[]).length===0&&!group.comingSoon&&(
+                      <div style={{margin:"0 16px 10px",padding:"14px",background:"var(--card)",border:"1px dashed var(--bl)",borderRadius:12,textAlign:"center",fontSize:12,color:"var(--md)"}}>尚無產品，點右上角新增</div>
+                    )}
+                    {(group.items||[]).map((prod,pi)=>(
+                      <div key={pi} style={{margin:"0 16px 8px",background:"var(--card)",border:`1px solid ${group.border||"var(--bl)"}`,borderRadius:14,padding:"14px 16px"}}>
+                        <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:8,letterSpacing:1,color:"var(--md)",marginBottom:3,textTransform:"uppercase"}}>{prod.type} · {prod.country}</div>
+                            <div style={{fontFamily:"'Noto Serif TC',serif",fontSize:14,fontWeight:600,color:"var(--td)",lineHeight:1.4}}>{prod.company} — {prod.name}</div>
+                            {prod.min&&<div style={{fontSize:11,color:"var(--md)",marginTop:3}}>最低：{prod.min}</div>}
+                            {prod.tags?.length>0&&(
+                              <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
+                                {prod.tags.map((t,ti)=><div key={ti} style={{fontSize:10,color:"var(--md)",background:"var(--card2)",padding:"2px 8px",borderRadius:10,border:"1px solid var(--bl)"}}>{t}</div>)}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{display:"flex",gap:6,flexShrink:0}}>
+                            <button onClick={()=>{
+                              setProdEditorGroupIdx(gi);
+                              setProdEditorItemIdx(pi);
+                              setProdForm({
+                                company:prod.company||"",name:prod.name||"",country:prod.country||"香港",
+                                type:prod.type||"分紅保單",min:prod.min||"",
+                                payTerms:[...(prod.payTerms||[])],breakeven:prod.breakeven||"",
+                                irr:prod.irr||"",tags:[...(prod.tags||[])],
+                                suitable:prod.suitable||"",notes:prod.notes||""
+                              });
+                              setProdFormTagInput("");setProdFormTermInput("");
+                              setShowProdEditor(true);
+                            }} style={{padding:"6px 12px",borderRadius:8,border:"1px solid rgba(154,110,32,.3)",background:"rgba(154,110,32,.08)",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:"#8a5e18",cursor:"pointer"}}>✎ 編輯</button>
+                            <button onClick={()=>{
+                              const next=productGroups.map((g,gii)=>gii!==gi?g:{...g,items:g.items.filter((_,pii)=>pii!==pi)});
+                              setProductGroups(next);
+                              saveUserData("local-kate","kate_products",next).catch(console.error);
+                              showToast("✓ 產品已刪除");
+                            }} style={{padding:"6px 10px",borderRadius:8,border:"1px solid rgba(176,80,96,.25)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:9,color:"#b05060",cursor:"pointer"}}>✕</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {advisorSub==="qa"&&(
               <div style={{paddingTop:16}}>
                 <div className="qa-wrap">
@@ -3460,9 +3641,68 @@ export default function App(){
                     <div className="qa-hero-s">財務規劃、產品比較、名詞解釋，一問就懂</div>
                   </div>
                   {qaThread.length===0&&(
-                    <div className="qa-chips">
-                      {QA_SUGGESTIONS.map((s,i)=><button key={i} className="qa-chip" onClick={()=>handleAsk(s)}>{s}</button>)}
-                    </div>
+                    <>
+                      {/* 主題入口 */}
+                      <div className="sec" style={{padding:"12px 0 8px"}}>財務主題諮詢</div>
+                      {[
+                        {icon:"🏠",title:"房地產稅務規劃",desc:"房地合一稅、自住優惠、節稅時機",tag:"稅務"},
+                        {icon:"📋",title:"遺產傳承規劃",desc:"遺產稅計算、保險傳承、信託配置",tag:"傳承"},
+                        {icon:"🌏",title:"境外資產配置",desc:"香港、新加坡保單優勢與注意事項",tag:"配置"},
+                        {icon:"💰",title:"退休金準備指南",desc:"複利效果、退休缺口試算、分紅保單",tag:"退休"},
+                        {icon:"⚠️",title:"地緣政治避險",desc:"台海風險下的資產分散策略",tag:"風險"},
+                      ].map((t,i)=>{
+                        const topicMsgs={"房地產稅務規劃":"我想了解房地產稅務規劃","遺產傳承規劃":"我想了解遺產傳承規劃","境外資產配置":"我想了解境外資產配置","退休金準備指南":"我想了解退休金規劃","地緣政治避險":"我想了解地緣政治風險下的資產配置"};
+                        const topicIntros={"房地產稅務規劃":"您好！在幫您介紹房地產稅務規劃之前，想先了解您的狀況 😊
+
+1️⃣ 目前持有幾間房產？自住、出租還是投資？
+2️⃣ 有考慮近期買賣嗎？
+3️⃣ 持有年限大概多久？
+
+這樣我可以給您最精準的節稅建議！","遺產傳承規劃":"您好！傳承規劃是很多高資產家庭關注的議題 👨‍👩‍👧‍👦
+
+1️⃣ 目前大概的資產規模？
+2️⃣ 有幾位繼承人？
+3️⃣ 資產主要在台灣還是也有海外？
+
+了解後我可以幫您估算遺產稅並推薦傳承工具！","境外資產配置":"您好！境外配置是分散風險的重要策略 🌏
+
+1️⃣ 考慮配置境外的主要原因？（節稅、傳承、分散風險？）
+2️⃣ 預計配置金額大概多少？
+3️⃣ 對香港、新加坡有偏好嗎？
+
+這樣我可以為您推薦最合適的境外保單組合！","退休金準備指南":"您好！退休規劃越早開始越好 🏖️
+
+1️⃣ 目前幾歲？預計幾歲退休？
+2️⃣ 退休後每月希望多少生活費？
+3️⃣ 目前已累積的退休金大約多少？
+
+我可以幫您算出退休缺口並推薦補足方案！","地緣政治避險":"您好！台海局勢是很多客戶近期最關心的議題 ⚠️
+
+1️⃣ 資產目前主要在哪裡？
+2️⃣ 最擔心的風險是什麼？
+3️⃣ 希望分散到哪個地區？
+
+了解後我可以為您設計具體的避險配置方案！"};
+                        return(
+                          <div key={i} style={{marginBottom:8,background:"var(--card)",border:"1px solid var(--bl)",borderRadius:12,padding:"12px 14px",display:"flex",gap:10,alignItems:"center",cursor:"pointer"}} onClick={()=>{
+                            setQaThread(p=>[...p,{type:"user",text:topicMsgs[t.title]||t.title}]);
+                            setQaLoading(true);
+                            askAI(topicIntros[t.title]||t.title).then(res=>{setQaThread(p=>[...p,{type:"ai",...res}]);setQaLoading(false);});
+                          }}>
+                            <div style={{width:40,height:40,borderRadius:10,background:"rgba(154,110,32,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{t.icon}</div>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:13,fontWeight:600,color:"var(--td)",marginBottom:2}}>{t.title}</div>
+                              <div style={{fontSize:11,color:"var(--md)"}}>{t.desc}</div>
+                            </div>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:8,color:"#9a6e20",background:"rgba(154,110,32,.1)",padding:"2px 8px",borderRadius:8,flexShrink:0}}>{t.tag}</div>
+                          </div>
+                        );
+                      })}
+                      <div className="sec" style={{padding:"12px 0 8px"}}>快速問答</div>
+                      <div className="qa-chips">
+                        {QA_SUGGESTIONS.map((s,i)=><button key={i} className="qa-chip" onClick={()=>handleAsk(s)}>{s}</button>)}
+                      </div>
+                    </>
                   )}
                   <div className="qa-thread" ref={qaRef}>
                     {qaThread.map((msg,i)=>(
@@ -3779,6 +4019,100 @@ export default function App(){
         </div>
       )}
 
+      {/* Product Editor Modal */}
+      {showProdEditor&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(10,8,5,.85)",zIndex:200,display:"flex",alignItems:"flex-end",backdropFilter:"blur(4px)"}} onClick={e=>e.target===e.currentTarget&&setShowProdEditor(false)}>
+          <div style={{width:"100%",maxWidth:430,margin:"0 auto",background:"var(--card)",borderRadius:"20px 20px 0 0",maxHeight:"92vh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+            <div style={{padding:"20px 20px 0",flexShrink:0}}>
+              <div style={{width:36,height:4,background:"var(--bl)",borderRadius:2,margin:"0 auto 16px"}}/>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:3,color:"var(--gold)",textTransform:"uppercase"}}>{prodEditorItemIdx===null?"新增產品":"編輯產品"}</div>
+                <button onClick={()=>setShowProdEditor(false)} style={{width:28,height:28,borderRadius:8,border:"1px solid var(--bl)",background:"transparent",fontSize:16,color:"var(--md)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+              </div>
+              <div style={{fontSize:11,color:"var(--md)",marginBottom:16}}>{productGroups[prodEditorGroupIdx]?.cat}</div>
+            </div>
+            <div style={{flex:1,overflowY:"auto",padding:"0 20px 20px"}}>
+              {[["公司名稱 *","company","例如：富邦"],["產品名稱 *","name","例如：富域多元貨幣"],["國家/地區","country","例如：香港"],["產品類型","type","例如：分紅保單"],["最低投入","min","例如：USD 20,000/年"],["回本年期","breakeven","例如：兩年期第四年回本"],["IRR","irr","例如：6%"],["適合對象","suitable","例如：台灣客戶，小孩海外留學"]].map(([lbl,key,ph])=>(
+                <div key={key} style={{marginBottom:12}}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",textTransform:"uppercase",marginBottom:5}}>{lbl}</div>
+                  <input value={prodForm[key]||""} onChange={e=>setProdForm(p=>({...p,[key]:e.target.value}))} placeholder={ph}
+                    style={{width:"100%",background:"var(--card2)",border:"1px solid rgba(140,110,80,.2)",borderRadius:10,padding:"11px 14px",fontSize:14,color:"var(--td)",fontFamily:"'Noto Sans TC',sans-serif",outline:"none"}}/>
+                </div>
+              ))}
+              <div style={{marginBottom:12}}>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",textTransform:"uppercase",marginBottom:5}}>產品說明</div>
+                <textarea value={prodForm.notes||""} onChange={e=>setProdForm(p=>({...p,notes:e.target.value}))} placeholder="產品特色說明…" rows={3}
+                  style={{width:"100%",background:"var(--card2)",border:"1px solid rgba(140,110,80,.2)",borderRadius:10,padding:"11px 14px",fontSize:14,color:"var(--td)",fontFamily:"'Noto Sans TC',sans-serif",outline:"none",resize:"none"}}/>
+              </div>
+              <div style={{marginBottom:12}}>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",textTransform:"uppercase",marginBottom:5}}>特色標籤 <span style={{fontFamily:"'Noto Sans TC'",letterSpacing:0,fontSize:10}}>(按 Enter 新增)</span></div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8,minHeight:8}}>
+                  {(prodForm.tags||[]).map((t,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:4,background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:20,padding:"3px 10px"}}>
+                      <span style={{fontSize:12,color:"#8a5e18"}}>{t}</span>
+                      <button onClick={()=>setProdForm(p=>({...p,tags:p.tags.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",color:"#b05060",fontSize:14,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <input value={prodFormTagInput} onChange={e=>setProdFormTagInput(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"&&prodFormTagInput.trim()){setProdForm(p=>({...p,tags:[...(p.tags||[]),prodFormTagInput.trim()]}));setProdFormTagInput("");}}}
+                    placeholder="例如：第四年回本"
+                    style={{flex:1,background:"var(--card2)",border:"1px solid rgba(140,110,80,.2)",borderRadius:10,padding:"9px 12px",fontSize:13,color:"var(--td)",fontFamily:"'Noto Sans TC',sans-serif",outline:"none"}}/>
+                  <button onClick={()=>{if(prodFormTagInput.trim()){setProdForm(p=>({...p,tags:[...(p.tags||[]),prodFormTagInput.trim()]}));setProdFormTagInput("");}}}
+                    style={{padding:"9px 14px",borderRadius:10,border:"1px solid rgba(154,110,32,.3)",background:"rgba(154,110,32,.1)",fontFamily:"'Cinzel',serif",fontSize:10,color:"#8a5e18",cursor:"pointer"}}>＋</button>
+                </div>
+              </div>
+              <div style={{marginBottom:20}}>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",textTransform:"uppercase",marginBottom:5}}>繳費年期 <span style={{fontFamily:"'Noto Sans TC'",letterSpacing:0,fontSize:10}}>(按 Enter 新增)</span></div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8,minHeight:8}}>
+                  {(prodForm.payTerms||[]).map((t,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:4,background:"rgba(90,104,120,.1)",border:"1px solid rgba(90,104,120,.3)",borderRadius:20,padding:"3px 10px"}}>
+                      <span style={{fontSize:12,color:"var(--silver)"}}>{t}</span>
+                      <button onClick={()=>setProdForm(p=>({...p,payTerms:p.payTerms.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",color:"#b05060",fontSize:14,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <input value={prodFormTermInput} onChange={e=>setProdFormTermInput(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"&&prodFormTermInput.trim()){setProdForm(p=>({...p,payTerms:[...(p.payTerms||[]),prodFormTermInput.trim()]}));setProdFormTermInput("");}}}
+                    placeholder="例如：2年"
+                    style={{flex:1,background:"var(--card2)",border:"1px solid rgba(140,110,80,.2)",borderRadius:10,padding:"9px 12px",fontSize:13,color:"var(--td)",fontFamily:"'Noto Sans TC',sans-serif",outline:"none"}}/>
+                  <button onClick={()=>{if(prodFormTermInput.trim()){setProdForm(p=>({...p,payTerms:[...(p.payTerms||[]),prodFormTermInput.trim()]}));setProdFormTermInput("");}}}
+                    style={{padding:"9px 14px",borderRadius:10,border:"1px solid rgba(90,104,120,.3)",background:"rgba(90,104,120,.1)",fontFamily:"'Cinzel',serif",fontSize:10,color:"var(--silver)",cursor:"pointer"}}>＋</button>
+                </div>
+              </div>
+              <button onClick={()=>{
+                if(!prodForm.company.trim()||!prodForm.name.trim())return showToast("⚠ 公司名稱與產品名稱為必填");
+                const newItem={...prodForm,tags:prodForm.tags||[],payTerms:prodForm.payTerms||[]};
+                const next=productGroups.map((g,gi)=>{
+                  if(gi!==prodEditorGroupIdx)return g;
+                  const items=prodEditorItemIdx===null
+                    ?[...(g.items||[]),newItem]
+                    :(g.items||[]).map((it,pi)=>pi===prodEditorItemIdx?newItem:it);
+                  return{...g,items};
+                });
+                setProductGroups(next);
+                saveUserData("local-kate","kate_products",next).catch(console.error);
+                setShowProdEditor(false);
+                showToast(prodEditorItemIdx===null?"✓ 產品已新增":"✓ 產品已更新");
+              }} style={{width:"100%",padding:"15px",border:"none",borderRadius:13,background:"linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60)",color:"#07090f",fontFamily:"'Cinzel',serif",fontSize:12,fontWeight:700,letterSpacing:3,cursor:"pointer",marginBottom:8}}>
+                {prodEditorItemIdx===null?"新增產品 ✓":"儲存變更 ✓"}
+              </button>
+              {prodEditorItemIdx!==null&&(
+                <button onClick={()=>{
+                  const next=productGroups.map((g,gi)=>gi!==prodEditorGroupIdx?g:{...g,items:(g.items||[]).filter((_,pi)=>pi!==prodEditorItemIdx)});
+                  setProductGroups(next);
+                  saveUserData("local-kate","kate_products",next).catch(console.error);
+                  setShowProdEditor(false);
+                  showToast("✓ 產品已刪除");
+                }} style={{width:"100%",padding:"12px",borderRadius:13,border:"1px solid rgba(176,80,96,.25)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:2,color:"#b05060",cursor:"pointer"}}>刪除此產品</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast&&<div className="toast">{toast}</div>}
 
       {/* NAV */}
@@ -3793,12 +4127,14 @@ export default function App(){
       </nav>
 
       {/* Messenger */}
-      {showMsg&&<MessengerOverlay msgThread={msgThread} msgInput={msgInput} setMsgInput={setMsgInput} msgLoading={msgLoading} showProdMenu={showProdMenu} handleMsgSend={handleMsgSend} handleQuick={handleQuick} handleProductSelect={handleProductSelect} onClose={()=>setShowMsg(false)} threadRef={threadRef}/>}
+      {showMsg&&<MessengerOverlay msgThread={msgThread} msgInput={msgInput} setMsgInput={setMsgInput} msgLoading={msgLoading} showProdMenu={showProdMenu} handleMsgSend={handleMsgSend} handleQuick={handleQuick} handleProductSelect={handleProductSelect} onClose={()=>setShowMsg(false)} threadRef={threadRef} productGroups={productGroups}/>}
     </div>
   </>);
 }
 
-function MessengerOverlay({msgThread,msgInput,setMsgInput,msgLoading,showProdMenu,handleMsgSend,handleQuick,handleProductSelect,onClose,threadRef}){
+function MessengerOverlay({msgThread,msgInput,setMsgInput,msgLoading,showProdMenu,handleMsgSend,handleQuick,handleProductSelect,onClose,threadRef,productGroups}){
+  const liveKB=buildKB(productGroups||DEFAULT_PRODUCT_GROUPS);
+  const liveList=Object.keys(liveKB);
   return(
     <div className="msg-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="msg-sheet">
@@ -3819,9 +4155,9 @@ function MessengerOverlay({msgThread,msgInput,setMsgInput,msgLoading,showProdMen
           {showProdMenu&&(
             <div className="prod-menu">
               <div className="prod-menu-lbl">請選擇想了解的產品</div>
-              {PRODUCTS_LIST.map(name=>(
+              {liveList.map(name=>(
                 <div className="prod-menu-item" key={name} onClick={()=>handleProductSelect(name)}>
-                  <div><div className="prod-menu-name">{name}</div><div className="prod-menu-region">{PRODUCT_KB_OBJ[name].region} · {PRODUCT_KB_OBJ[name].type}</div></div>
+                  <div><div className="prod-menu-name">{name}</div><div className="prod-menu-region">{liveKB[name]?.region||""} · {liveKB[name]?.type||""}</div></div>
                   <div style={{fontSize:14,color:"var(--md)"}}>›</div>
                 </div>
               ))}
