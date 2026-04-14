@@ -162,9 +162,9 @@ const TERMS=[
 ];
 
 async function askAI(question){
-  const raw=await generateAI(`你是凱特資產管理的財商教育顧問。用繁體中文回答問題，格式：先用一句話說重點，然後用150字內詳細解釋，最後提出3個相關問題。
-回答格式（純JSON，不加任何說明）：{"answer":"詳細解答","keyPoint":"一句話重點","related":["問題1","問題2","問題3"]}
-問題：${question}`,1000);
+  const raw=await generateAI(`你是凱特資產管理財商顧問。繁體中文，簡潔回答。
+純JSON格式：{"answer":"100字內解答","keyPoint":"一句話重點","related":["相關問題1","相關問題2","相關問題3"]}
+問題：${question}`,500);
   try{
     const cleaned=raw.replace(/```json|```/g,"").trim();
     const start=cleaned.indexOf("{");const end=cleaned.lastIndexOf("}")+1;
@@ -233,7 +233,7 @@ const S=`
   .sec{font-family:'Cinzel',serif;font-size:15px;letter-spacing:4px;color:rgba(240,242,248,.28);text-transform:uppercase;padding:18px 18px 10px;display:flex;align-items:center;gap:12px;}
   .sec::after{content:'';flex:1;height:1px;background:rgba(240,242,245,.07);}
   .back-btn{display:inline-flex;align-items:center;gap:6px;position:absolute;top:52px;left:16px;z-index:10;background:rgba(28,15,8,.6);backdrop-filter:blur(8px);border:1px solid rgba(240,242,248,.12);border-radius:20px;padding:6px 14px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:rgba(240,242,248,.6);cursor:pointer;}
-  .toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:rgba(32,18,8,.95);backdrop-filter:blur(12px);border:1px solid rgba(240,242,245,.1);border-radius:14px;padding:14px 20px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:2px;color:var(--tl);z-index:400;white-space:nowrap;animation:fadeup .3s ease;}
+  .toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:rgba(255,252,245,.96);backdrop-filter:blur(12px);border:1px solid rgba(200,168,75,.3);border-radius:14px;padding:12px 20px;font-family:'Cinzel',serif;font-size:13px;letter-spacing:2px;color:#2c1e0f;z-index:400;white-space:nowrap;animation:fadeup .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.15);}
   @keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
   .add-btn{margin:12px 16px 0;width:calc(100% - 32px);background:transparent;border:1px dashed rgba(200,168,75,.25);border-radius:12px;padding:13px;font-family:'Cinzel',serif;font-size:15px;letter-spacing:2px;color:rgba(200,168,75,.4);cursor:pointer;transition:all .2s;display:block;}
   .add-btn:hover{border-color:var(--gold);color:var(--gold);}
@@ -957,11 +957,6 @@ export default function App(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[loggedIn]);
 
-  useEffect(()=>{
-    if(!loggedIn)return;
-    refreshMetalPrices();
-  },[loggedIn]);
-
   const refreshMetalPrices=async()=>{
     if(metalPricesLoading)return;
     setMetalPricesLoading(true);
@@ -1044,10 +1039,23 @@ export default function App(){
     const localUser=LOCAL_ACCOUNTS.find(u=>u.username===acct.trim()&&u.password===pwd);
     if(localUser){
       setCurrentUser(localUser);setIsKate(localUser.is_kate);setRisk(localUser.risk_level||"穩健");
-      setInsuranceHoldings([]);
-      setStockHoldings([]);
-      setFixedHoldings([]);
-      setMetalHoldings([]);
+      // 嘗試從 Supabase 讀取資料
+      try{
+        const insData=await loadUserData(localUser.id,"insurance");
+        const stkData=await loadUserData(localUser.id,"stocks");
+        const fixData=await loadUserData(localUser.id,"fixed");
+        const metalData=await loadUserData(localUser.id,"metals");
+        const reData=await loadUserData(localUser.id,"realestate");
+        const hlthData=await loadUserData(localUser.id,"health_score");
+        const onbData=await loadUserData(localUser.id,"onboarding_clients");
+        if(insData&&insData.length>0)setInsuranceHoldings(insData);
+        if(stkData&&stkData.length>0)setStockHoldings(stkData);
+        if(fixData&&fixData.length>0)setFixedHoldings(fixData);
+        if(metalData&&metalData.length>0)setMetalHoldings(metalData);
+        if(reData&&reData.length>0)setRealEstateHoldings(reData);
+        if(hlthData)setHealthScore(hlthData);
+        if(onbData&&onbData.length>0)setOnboardingList(onbData);
+      }catch(e){console.error("Supabase load error",e);}
       setLoggedIn(true);setLoginLoading(false);return;
     }
     // 嘗試 Supabase
