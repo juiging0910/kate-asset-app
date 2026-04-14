@@ -91,23 +91,30 @@ const INDICES_CONFIG=[
   {name:"日經 225",  symbol:"^N225"},
 ];
 async function fetchYahooIndex(symbol){
-  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
-  const res=await fetch(url,{headers:{"Accept":"application/json"}});
-  if(!res.ok)throw new Error("Yahoo API error");
-  const data=await res.json();
-  const meta=data?.chart?.result?.[0]?.meta;
-  if(!meta)throw new Error("No meta");
-  const price=meta.regularMarketPrice;
-  const prev=meta.chartPreviousClose||meta.previousClose||price;
-  const chgAbs=price-prev;
-  const chgPct=prev>0?(chgAbs/prev)*100:0;
-  const up=chgAbs>=0;
-  const fmt=(n)=>n>=1000?n.toLocaleString("en-US",{maximumFractionDigits:2}):n.toFixed(2);
-  return{
-    price:fmt(price),
-    chg:`${up?"+":""}${chgPct.toFixed(2)}%`,
-    up,
-  };
+  // Try direct Yahoo Finance v8 first (works in most browsers)
+  const endpoints=[
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`,
+    `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`)}`,
+  ];
+  let lastErr;
+  for(const url of endpoints){
+    try{
+      const res=await fetch(url,{headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0"}});
+      if(!res.ok)continue;
+      const data=await res.json();
+      const meta=data?.chart?.result?.[0]?.meta;
+      if(!meta)continue;
+      const price=meta.regularMarketPrice;
+      const prev=meta.chartPreviousClose||meta.previousClose||price;
+      const chgAbs=price-prev;
+      const chgPct=prev>0?(chgAbs/prev)*100:0;
+      const up=chgAbs>=0;
+      const fmt=(n)=>n>=10000?Math.round(n).toLocaleString("en-US"):n>=1000?n.toLocaleString("en-US",{maximumFractionDigits:2}):n.toFixed(2);
+      return{price:fmt(price),chg:`${up?"+":""}${chgPct.toFixed(2)}%`,up};
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error("All Yahoo endpoints failed");
 }
 async function fetchAllIndices(){
   const results=await Promise.allSettled(INDICES_CONFIG.map(c=>fetchYahooIndex(c.symbol)));
@@ -1585,27 +1592,54 @@ export default function App(){
     if(!selectedThemes.length)return;
     setPicksStep("loading");
     const labels=selectedThemes.map(k=>THEMES.find(t=>t.key===k)?.label).join("、");
+    const todayStr=new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
+    const todayISO=new Date().toISOString().slice(0,10);
     try{
-      setLoadingStep("搜尋相關時事新聞…");
-      const newsRaw=await searchNews(`Search for the latest news today related to: ${labels}, 台灣遺產稅, 傳承規劃, 地緣政治風險, 退休金, 海外資產配置, 節稅. Include both global and Taiwan news. Summarize 4-5 most relevant recent news items in Traditional Chinese.`);
-      setLoadingStep("整理市場動態…");
+      setLoadingStep("搜尋今日最新時事新聞…");
+      const newsRaw=await searchNews(`${todayISO} 今日最新財經新聞 ${labels} 台灣 遺產稅 地緣政治 海外資產 美股 台股 最新動態`);
+      setLoadingStep("整理市場動態與主題…");
       let parsed;
       try{
-        const raw1=await generateAI(`根據以下新聞整理成JSON（只輸出JSON）：{"news":[{"tag":"分類","title":"標題20字內","desc":"摘要40字內","color":"gold/rose/blue/green"}],"mainTheme":"主題10字內","marketContext":"背景50字內"}\n新聞：${newsRaw.slice(0,2000)}`);
+        const raw1=await generateAI(`今天是${todayStr}。根據以下【今日】真實新聞，整理出與「${labels}」最相關的新聞，並提煉出今日主題。只輸出純JSON，不加任何說明：
+{"news":[{"tag":"分類","title":"標題20字內（必須是真實今日新聞標題）","desc":"摘要40字內","color":"gold/rose/blue/green"}],"mainTheme":"今日主題10字內","marketContext":"今日市場背景50字內，必須包含具體數字或事件"}
+今日新聞資料：${newsRaw.slice(0,3000)}`,1000);
         const c1=raw1.replace(/```json|```/g,"").trim();
         parsed=JSON.parse(c1.slice(c1.indexOf("{"),c1.lastIndexOf("}")+1));
       }catch{
-        parsed={news:[{tag:"傳承",title:"台灣遺產稅改革討論持續",desc:"立法院就遺產稅率調整展開討論",color:"gold"},{tag:"地緣政治",title:"台海情勢牽動亞太資金流向",desc:"不確定性促使高淨值客戶加速資產分散",color:"rose"}],mainTheme:"傳承與地緣政治避險",marketContext:"高資產客戶面臨稅改與地緣政治雙重壓力"};
+        parsed={news:[{tag:"市場",title:`${todayStr}財經重點`,desc:"今日市場最新動態",color:"gold"}],mainTheme:labels,marketContext:`${todayStr}，${labels}相關議題持續受到高資產客戶關注`};
       }
       setPicksNewsItems(parsed.news||[]);
-      setLoadingStep("結合產品知識庫生成凱特建議…");
+      setLoadingStep("結合產品知識庫，生成今日凱特觀點…");
       let rec;
       try{
-        const raw2=await generateAI(`你是凱特資產管理的頂級財富顧問。今日主題：「${parsed.mainTheme}」。背景：${parsed.marketContext}。客戶關注：${labels}。\n${buildKBText(productGroups)}\n\n輸出純JSON：{"title":"推薦標題25字內","body":"凱特觀點180字內，結合時事，不要列點","theme":"主題標籤8字內","products":[{"rank":"首選","name":"產品名稱","region":"地區","reason":"50字內"},{"rank":"次選","name":"","region":"","reason":""},{"rank":"補充","name":"","region":"","reason":""}]}`);
+        const raw2=await generateAI(`你是凱特資產管理的頂級財富顧問。今天是${todayStr}。
+
+今日市場主題：「${parsed.mainTheme}」
+今日背景：${parsed.marketContext}
+客戶關注方向：${labels}
+今日相關新聞：${(parsed.news||[]).map(n=>n.title).join("、")}
+
+產品知識庫：${buildKBText(productGroups)}
+
+請根據【今日】真實時事，寫一篇凱特的市場觀點與產品推薦。要求：
+1. 標題必須包含今日具體時事或數字
+2. 內文必須結合今日新聞，有凱特的獨到觀點，語氣專業但親切
+3. 推薦產品要說明為何今天特別適合配置
+
+只輸出純JSON：{"title":"推薦標題25字內（含今日時事）","body":"凱特觀點200字內，結合今日時事，有具體建議，不要條列","theme":"主題標籤8字內","products":[{"rank":"首選","name":"產品全名","region":"地區","reason":"60字內，說明為何今日特別適合"},{"rank":"次選","name":"","region":"","reason":""},{"rank":"補充","name":"","region":"","reason":""}]}`,1500);
         const c2=raw2.replace(/```json|```/g,"").trim();
         rec=JSON.parse(c2.slice(c2.indexOf("{"),c2.lastIndexOf("}")+1));
       }catch{
-        rec={title:"遺產稅改革在即，境外傳承規劃刻不容緩",body:"台灣遺產稅改革討論持續升溫，疊加台海地緣政治不確定性，越來越多高資產家庭選擇將資產提前配置於境外，透過香港或新加坡的分紅終身壽險進行傳承規劃。保單身故保障在多數地區不計入遺產，可有效規避稅務風險。建議以2-3年為配置周期，分批布局香港與新加坡市場。",theme:"傳承・地緣政治",products:[{rank:"首選",name:"富衛FWD — 盈聚天下 分紅儲蓄",region:"🇭🇰 香港",reason:"最快第三年回本，8種貨幣靈活配置，保監局推薦五星級。"},{rank:"次選",name:"安達 — 傳承守創V",region:"🇭🇰 香港",reason:"2年繳清第5年回本，折扣最多，快速完成傳承布局。"},{rank:"補充",name:"AIA友邦 — PIW百樂財富永傳",region:"🇸🇬 新加坡",reason:"新加坡監管完善，地緣政治避險的理想境外配置地點。"}]};
+        rec={
+          title:`${new Date().toLocaleDateString("zh-TW",{month:"numeric",day:"numeric"})} 凱特觀點：${labels}配置策略`,
+          body:`今天${todayStr}，${parsed.marketContext}。面對當前市場環境，建議高資產客戶把握時機，透過境外保單分散風險、鎖定長期報酬。境外保險不計入台灣遺產，同時提供多元貨幣配置，是當前環境下最佳的資產保全工具之一。建議分2-3年逐步布局香港與新加坡市場，以降低單一時點風險。`,
+          theme:labels,
+          products:[
+            {rank:"首選",name:"富衛FWD — 盈聚天下 分紅儲蓄",region:"🇭🇰 香港",reason:"最快第三年回本，保監局推薦，面對市場波動提供確定性報酬。"},
+            {rank:"次選",name:"安達 — 傳承守創V",region:"🇭🇰 香港",reason:"折扣最多、回本快，適合希望盡速完成傳承布局的客戶。"},
+            {rank:"補充",name:"AIA友邦 — PIW百樂財富永傳",region:"🇸🇬 新加坡",reason:"新加坡監管嚴格，地緣政治風險下的理想境外配置。"}
+          ]
+        };
       }
       setDraftTitle(rec.title);
       setDraftBody(rec.body);
@@ -3275,13 +3309,16 @@ export default function App(){
                       <div className="admin-title">✦ 凱特後台</div>
                       {picksStep==="idle"&&(
                         <>
-                          <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"rgba(240,242,248,.4)",textTransform:"uppercase",marginBottom:10}}>選擇今日推薦主題</div>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"rgba(240,242,248,.4)",textTransform:"uppercase"}}>選擇今日推薦主題</div>
+                            <div style={{fontFamily:"'Noto Sans TC',sans-serif",fontSize:10,color:"rgba(240,242,248,.3)"}}>{new Date().toLocaleDateString("zh-TW",{month:"numeric",day:"numeric",weekday:"short"})}</div>
+                          </div>
                           <div className="theme-grid">
                             {THEMES.map(t=>(
                               <div key={t.key} className={`theme-chip ${selectedThemes.includes(t.key)?"selected":""}`} onClick={()=>toggleTheme(t.key)}>{t.icon} {t.label}</div>
                             ))}
                           </div>
-                          <button className="gen-btn" onClick={handleGenerate} disabled={!selectedThemes.length}><span>✦</span> AI 搜尋時事並生成推薦</button>
+                          <button className="gen-btn" onClick={handleGenerate} disabled={!selectedThemes.length}><span>✦</span> AI 搜尋今日時事並生成推薦</button>
                         </>
                       )}
                       {picksStep==="loading"&&(
@@ -3317,8 +3354,9 @@ export default function App(){
                       )}
                       {picksStep==="draft"&&(
                         <>
-                          <button className="pub-btn" style={{margin:"0 0 8px",width:"100%"}} onClick={handlePublishPicks}>審核完成，發布至客戶頁面</button>
-                          <button className="reset-btn" style={{margin:"0",width:"100%"}} onClick={resetPicks}>重新搜尋生成</button>
+                          <button className="pub-btn" style={{margin:"0 0 8px",width:"100%"}} onClick={handlePublishPicks}>✓ 審核完成，發布至客戶頁面</button>
+                          <button className="gen-btn" style={{margin:"0 0 8px",width:"100%",opacity:.85}} onClick={handleGenerate}>↻ 重新生成（換一個版本）</button>
+                          <button className="reset-btn" style={{margin:"0",width:"100%"}} onClick={resetPicks}>← 重新選擇主題</button>
                         </>
                       )}
                       {picksStep==="published"&&<button className="gen-btn" style={{marginTop:12}} onClick={resetPicks}>重新搜尋生成</button>}
