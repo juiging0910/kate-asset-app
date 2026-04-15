@@ -83,53 +83,32 @@ const PRODUCT_KB_TEXT = buildKBText(DEFAULT_PRODUCT_GROUPS);
 
 const THEMES=[{key:"inheritance",label:"傳承規劃",icon:"👨‍👩‍👧‍👦"},{key:"retirement",label:"退休規劃",icon:"🏖️"},{key:"protection",label:"資產保全",icon:"🛡️"},{key:"overseas",label:"海外配置",icon:"🌏"},{key:"tax",label:"節稅規劃",icon:"📋"},{key:"geopolitical",label:"地緣政治",icon:"⚠️"}];
 
-// ── AI helpers ──
-const ANTHROPIC_KEY=import.meta.env.VITE_ANTHROPIC_KEY||"";
-const AI_HEADERS={"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
-
-// ── 即時指數（透過 CORS proxy 抓 Yahoo Finance）──
-const INDICES_CONFIG=[
-  {name:"台灣加權",symbol:"^TWII"},
-  {name:"S&P 500",  symbol:"^GSPC"},
-  {name:"那斯達克",  symbol:"^IXIC"},
-  {name:"日經 225",  symbol:"^N225"},
-];
-async function fetchYahooIndex(symbol){
-  const yahooUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
-  // 用 allorigins proxy 繞過 CORS（同樣用於抓 OG image，已確認可用）
-  const proxies=[
-    `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
-    `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
-  ];
-  for(const proxyUrl of proxies){
-    try{
-      const res=await fetch(proxyUrl,{signal:AbortSignal.timeout(6000)});
-      if(!res.ok)continue;
-      const outer=await res.json();
-      // allorigins wraps in {contents:"..."}; corsproxy returns directly
-      const raw=outer.contents!==undefined?outer.contents:JSON.stringify(outer);
-      const data=JSON.parse(raw);
-      const meta=data?.chart?.result?.[0]?.meta;
-      if(!meta||!meta.regularMarketPrice)continue;
-      const price=meta.regularMarketPrice;
-      const prev=meta.chartPreviousClose||meta.previousClose||price;
-      const chgAbs=price-prev;
-      const chgPct=prev>0?(chgAbs/prev)*100:0;
-      const up=chgAbs>=0;
-      const fmt=(n)=>n>=10000?Math.round(n).toLocaleString("en-US"):n>=1000?n.toLocaleString("en-US",{maximumFractionDigits:2}):n.toFixed(2);
-      return{price:fmt(price),chg:`${up?"+":""}${chgPct.toFixed(2)}%`,up};
-    }catch{}
-  }
-  throw new Error(`fetch failed: ${symbol}`);
+// ── AI helpers（所有 Anthropic 呼叫走 /api/ai，金鑰留在伺服器端）──
+async function callAI(body){
+  const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
+  if(!res.ok){const e=await res.text();throw new Error(`AI API error ${res.status}: ${e}`);}
+  return res.json();
 }
+
+// ── 即時指數（透過 Vercel Edge Function，伺服器端抓 Yahoo Finance）──
 async function fetchAllIndices(){
-  const results=await Promise.allSettled(INDICES_CONFIG.map(c=>fetchYahooIndex(c.symbol)));
-  return results.map((r,i)=>{
-    if(r.status==="fulfilled"){
-      return{name:INDICES_CONFIG[i].name,val:r.value.price,chg:r.value.chg,up:r.value.up,loading:false};
-    }
-    return null;
-  }).filter(Boolean);
+  const res=await fetch("/api/indices",{signal:AbortSignal.timeout(8000)});
+  if(!res.ok)throw new Error(`API error ${res.status}`);
+  const data=await res.json();
+  return(data.indices||[]).map(idx=>({...idx,loading:false}));
+}
+// fetchYahooIndex 仍保留供貴金屬使用
+async function fetchYahooIndex(symbol){
+  try{
+    const res=await fetch(`/api/indices?symbol=${encodeURIComponent(symbol)}`,{signal:AbortSignal.timeout(8000)});
+    if(!res.ok)throw new Error(`API ${res.status}`);
+    const data=await res.json();
+    const idx=data.indices?.[0];
+    if(!idx)throw new Error("no data");
+    return{price:idx.val,chg:idx.chg,up:idx.up};
+  }catch{
+    throw new Error(`fetchYahooIndex failed: ${symbol}`);
+  }
 }
 // ── 新聞主題 SVG 插圖生成 ──
 function getNewsSVG(tag,emoji,cls){
@@ -233,18 +212,15 @@ function getNewsImgUrl(imgUrl,imgQuery,cls){
 }
 
 async function searchNews(query){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AI_HEADERS,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:query}]})});
-  const data=await res.json();
+  const data=await callAI({model:"claude-sonnet-4-20250514",max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:query}]});
   return data.content?.filter(b=>b.type==="text").map(b=>b.text).join("\n")||"";
 }
 async function generateAI(prompt,maxTokens=1500){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AI_HEADERS,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})});
-  const data=await res.json();
+  const data=await callAI({model:"claude-sonnet-4-20250514",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]});
   return data.content?.[0]?.text||"";
 }
 async function aiChat(messages,systemPrompt){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AI_HEADERS,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:systemPrompt,messages})});
-  const data=await res.json();
+  const data=await callAI({model:"claude-sonnet-4-20250514",max_tokens:600,system:systemPrompt,messages});
   return data.content?.[0]?.text||"抱歉，請稍後再試。";
 }
 
@@ -317,6 +293,55 @@ const TERMS=[
   {word:"分紅保單",en:"Participating Policy",icon:"📋",iconCls:"ti-gold",cat:"保險",simple:"保險公司把一部分投資獲利分給你，稱為「分紅」。分成保證和非保證兩部分，長期累積可以很可觀。",detail:"分為「歸原紅利」（每年公佈後保證）和「特別紅利」（非保證）兩種。",example:"富衛盈聚天下II，供款期滿後累積分紅可顯著提升保單現金價值。"},
   {word:"私募基金",en:"Private Fund",icon:"💰",iconCls:"ti-silver",cat:"投資",simple:"不在公開市場買賣的投資產品，只開放給高資產投資人。門檻較高但潛在回報也較高，流動性較低。",detail:"私募固定收益類似借錢給特定企業或項目，約定固定利率和還款期，風險比股票低但比定存高。",example:"萬兆豐金益求兆，年化報酬率約6%，資金鎖定期1-3年，適合有閒置資金的高資產客戶。"},
 ];
+
+// ── 股票現價批次查詢 ──
+async function fetchStockPrices(codes){
+  const priceMap=new Map();
+  if(!codes.length)return priceMap;
+  try{
+    const res=await fetch(`/api/quotes?symbols=${encodeURIComponent(codes.join(","))}`,{signal:AbortSignal.timeout(10000)});
+    if(res.ok){
+      const data=await res.json();
+      (data.indices||[]).forEach(item=>{
+        if(item.symbol&&item.val){
+          const price=parseFloat(String(item.val).replace(/,/g,""));
+          if(price>0)priceMap.set(item.symbol,price);
+        }
+      });
+      if(priceMap.size===codes.length)return priceMap;
+    }
+  }catch{}
+  // Fallback：對拿不到的逐一 AI 搜尋
+  const missing=codes.filter(c=>!priceMap.has(c));
+  await Promise.allSettled(missing.map(async code=>{
+    try{
+      const isTW=code.endsWith(".TW");
+      const raw=await searchNews(isTW?`台股 ${code.replace(".TW","")} 今日收盤價`:`${code} stock latest price today`);
+      const result=await generateAI(`找出股票「${code}」的最新股價。只輸出純JSON：{"price":數字}\n資料：${raw.slice(0,1000)}`,200);
+      const cleaned=result.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+      if(parsed.price&&parsed.price>0)priceMap.set(code,parsed.price);
+    }catch{}
+  }));
+  return priceMap;
+}
+
+// ── 貴金屬持倉連動金價 ──
+function syncMetalHoldingPrices(holdings,metalPrices,usdTwd){
+  if(!holdings.length)return holdings;
+  const goldUSDNum=parseFloat(String(metalPrices.goldUSD).replace(/,/g,""))||0;
+  if(goldUSDNum<=0)return holdings;
+  const goldPerGramUSD=Math.round((goldUSDNum/31.1035)*100)/100;
+  const goldPerGramTWD=Math.round(goldPerGramUSD*usdTwd*100)/100;
+  let changed=false;
+  const updated=holdings.map(h=>{
+    const isGoldTWD=h.currency==="TWD"||h.product?.includes("黃金");
+    const newPrice=isGoldTWD?goldPerGramTWD:goldPerGramUSD;
+    if(Math.abs((h.currentPricePerGram||0)-newPrice)>0.01){changed=true;return{...h,currentPricePerGram:newPrice};}
+    return h;
+  });
+  return changed?updated:holdings;
+}
 
 async function askAI(question){
   const raw=await generateAI(`你是凱特資產管理財商顧問。繁體中文，簡潔回答。
@@ -817,15 +842,13 @@ const S=`
   .avatar-btn{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#9a7030,#deba60);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;}
 `;
 
-// ─────────── SUPABASE ───────────
-const SUPA_URL="https://orsrkollpofjoewriopu.supabase.co";
-const SUPA_KEY="sb_publishable_wwg7Nw2n29nCWbL062gTmQ_JGLAghN-";
-
+// ─────────── SUPABASE（透過 /api/db 代理，金鑰留在伺服器端）───────────
 async function supaFetch(path,opts={}){
-  const res=await fetch(`${SUPA_URL}/rest/v1${path}`,{
-    headers:{"apikey":SUPA_KEY,"Authorization":`Bearer ${SUPA_KEY}`,"Content-Type":"application/json","Prefer":"return=representation",...(opts.headers||{})},
-    ...opts
-  });
+  const [basePath,qs]=path.split("?");
+  const proxyUrl=`/api/db?path=${encodeURIComponent(basePath)}${qs?"&"+qs:""}`;
+  const headers={"Content-Type":"application/json"};
+  if(opts.headers?.Prefer)headers["Prefer"]=opts.headers.Prefer;
+  const res=await fetch(proxyUrl,{method:opts.method||"GET",headers,body:opts.body||undefined});
   if(!res.ok){const e=await res.text();throw new Error(e);}
   const text=await res.text();
   return text?JSON.parse(text):null;
@@ -860,12 +883,20 @@ async function loadUserData(userId,key){
   const data=await supaFetch(`/kate_user_data?user_id=eq.${userId}&data_key=eq.${encodeURIComponent(key)}&select=data_value`);
   return data&&data.length>0?data[0].data_value:null;
 }
-async function saveUserData(userId,key,value){
-  await supaFetch(`/kate_user_data`,{
-    method:"POST",
-    headers:{"Prefer":"resolution=merge-duplicates"},
-    body:JSON.stringify({user_id:userId,data_key:key,data_value:value,updated_at:new Date().toISOString()})
-  });
+async function saveUserData(userId,key,value,retries=2){
+  for(let attempt=0;attempt<=retries;attempt++){
+    try{
+      await supaFetch(`/kate_user_data`,{
+        method:"POST",
+        headers:{"Prefer":"resolution=merge-duplicates"},
+        body:JSON.stringify({user_id:userId,data_key:key,data_value:value,updated_at:new Date().toISOString()})
+      });
+      return;
+    }catch(err){
+      if(attempt===retries)throw err;
+      await new Promise(r=>setTimeout(r,800*(attempt+1)));
+    }
+  }
 }
 
 // ─────────── MAIN COMPONENT ───────────
@@ -1141,49 +1172,79 @@ export default function App(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[loggedIn]);
 
+  // ── 股票現價自動更新（登入後立即執行，每 5 分鐘一次）──
+  useEffect(()=>{
+    if(!loggedIn||!stockHoldings.length)return;
+    const refresh=async()=>{
+      setStockRefreshing(true);
+      const codes=[...new Set(stockHoldings.map(h=>h.code))];
+      const priceMap=await fetchStockPrices(codes);
+      if(!priceMap.size){setStockRefreshing(false);return;}
+      setStockHoldings(prev=>{
+        const next=prev.map(h=>priceMap.has(h.code)?{...h,currentPrice:priceMap.get(h.code)}:h);
+        if(currentUser)saveUserData(currentUser.id,"stocks",next).catch(console.error);
+        return next;
+      });
+      showToast("✓ 股票現價已更新");
+      setStockRefreshing(false);
+    };
+    refresh();
+    const timer=setInterval(refresh,5*60*1000);
+    return()=>clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[loggedIn,stockHoldings.length]);
+
+  // ── 貴金屬持倉連動首頁金價 ──
+  useEffect(()=>{
+    if(!metalHoldings.length||!metalPrices.goldUSD)return;
+    const updated=syncMetalHoldingPrices(metalHoldings,metalPrices,USD_TWD);
+    if(updated!==metalHoldings){
+      setMetalHoldings(updated);
+      if(currentUser)saveUserData(currentUser.id,"metals",updated).catch(console.error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[metalPrices.goldUSD]);
+
   const refreshMetalPrices=async()=>{
     if(metalPricesLoading)return;
     setMetalPricesLoading(true);
     try{
-      const [goldR,silverR,platR]=await Promise.allSettled([
-        fetchYahooIndex("GC=F"),
-        fetchYahooIndex("SI=F"),
-        fetchYahooIndex("PL=F"),
+      // 用 Edge Function 抓貴金屬期貨
+      const [goldRes,silverRes,platRes]=await Promise.allSettled([
+        fetch("/api/quotes?symbols=GC%3DF,SI%3DF,PL%3DF",{signal:AbortSignal.timeout(8000)}),
       ]);
-      const gold=goldR.status==="fulfilled"?goldR.value:null;
-      const silver=silverR.status==="fulfilled"?silverR.value:null;
-      const plat=platR.status==="fulfilled"?platR.value:null;
-      if(gold){
+      const goldData=goldRes.status==="fulfilled"&&goldRes.value.ok?await goldRes.value.json():null;
+      if(goldData?.indices?.length>=1){
+        const [gc,si,pl]=goldData.indices;
         const now=new Date();
-        const goldUSDNum=parseFloat(String(gold.price).replace(/,/g,""))||0;
+        const goldUSDNum=parseFloat(String(gc.val).replace(/,/g,""))||0;
         const goldTWDPerGram=goldUSDNum>0?Math.round(goldUSDNum/31.1035*USD_TWD).toLocaleString():"N/A";
         setMetalPrices({
-          goldUSD:gold.price,goldUSDChg:gold.chg,goldUp:gold.up,
-          silverUSD:silver?.price||"—",silverUSDChg:silver?.chg||"—",silverUp:silver?.up??true,
-          goldTWD:goldTWDPerGram,goldTWDChg:gold.chg,
-          platinumUSD:plat?.price||"—",platinumChg:plat?.chg||"—",platinumUp:plat?.up??true,
+          goldUSD:gc.val,goldUSDChg:gc.chg,goldUp:gc.up,
+          silverUSD:si?.val||"—",silverUSDChg:si?.chg||"—",silverUp:si?.up??true,
+          goldTWD:goldTWDPerGram,goldTWDChg:gc.chg,
+          platinumUSD:pl?.val||"—",platinumChg:pl?.chg||"—",platinumUp:pl?.up??true,
           updatedAt:now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+" 更新"
         });
-        showToast("✓ 貴金屬行情已更新（Yahoo Finance）");
-      }else{
-        throw new Error("Yahoo metal failed");
+        showToast("✓ 貴金屬行情已更新");
+        setMetalPricesLoading(false);
+        return;
       }
-    }catch{
-      // Fallback: AI search
-      try{
-        const raw=await searchNews("gold silver platinum price today USD per ounce latest spot price");
-        const result=await generateAI(`根據以下貴金屬行情，整理最新價格與漲跌幅。只輸出純JSON：{"goldUSD":"數字加逗號","silverUSD":"數字","goldTWD":"數字","platinumUSD":"數字","goldUSDChg":"+/-百分比%","silverUSDChg":"+/-百分比%","goldTWDChg":"+/-百分比%","platinumChg":"+/-百分比%","goldUp":true或false,"silverUp":true或false,"platinumUp":true或false}\n資料：${raw.slice(0,2000)}`,400);
-        const cleaned=result.replace(/\`\`\`json|\`\`\`/g,"").trim();
-        const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
-        if(parsed.goldUSD){
-          const now=new Date();
-          const goldUSDNum=parseFloat(String(parsed.goldUSD).replace(/,/g,""))||0;
-          const goldTWDPerGram=goldUSDNum>0?Math.round(goldUSDNum/31.1035*USD_TWD).toLocaleString():"N/A";
-          setMetalPrices({...parsed,goldTWD:goldTWDPerGram,goldTWDChg:parsed.goldUSDChg||"",updatedAt:new Date().getHours().toString().padStart(2,"0")+":"+new Date().getMinutes().toString().padStart(2,"0")+" 更新"});
-          showToast("✓ 貴金屬行情已更新");
-        }
-      }catch{showToast("⚠ 更新失敗");}
-    }
+    }catch{}
+    // Fallback: AI search
+    try{
+      const raw=await searchNews("gold silver platinum price today USD per ounce latest spot price");
+      const result=await generateAI(`根據以下貴金屬行情，整理最新價格與漲跌幅。只輸出純JSON：{"goldUSD":"數字加逗號","silverUSD":"數字","goldTWD":"數字","platinumUSD":"數字","goldUSDChg":"+/-百分比%","silverUSDChg":"+/-百分比%","goldTWDChg":"+/-百分比%","platinumChg":"+/-百分比%","goldUp":true或false,"silverUp":true或false,"platinumUp":true或false}\n資料：${raw.slice(0,2000)}`,400);
+      const cleaned=result.replace(/\`\`\`json|\`\`\`/g,"").trim();
+      const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+      if(parsed.goldUSD){
+        const now=new Date();
+        const goldUSDNum=parseFloat(String(parsed.goldUSD).replace(/,/g,""))||0;
+        const goldTWDPerGram=goldUSDNum>0?Math.round(goldUSDNum/31.1035*USD_TWD).toLocaleString():"N/A";
+        setMetalPrices({...parsed,goldTWD:goldTWDPerGram,goldTWDChg:parsed.goldUSDChg||"",updatedAt:now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+" 更新"});
+        showToast("✓ 貴金屬行情已更新");
+      }
+    }catch{showToast("⚠ 更新失敗");}
     setMetalPricesLoading(false);
   };
 
@@ -1980,13 +2041,13 @@ export default function App(){
               onError={e=>{e.target.style.display="none";}}
             />
             <div className="nd-ov"/>
-            <div className="nd-hcon" style={{position:"relative",zIndex:1,padding:"20px 20px 20px"}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,zIndex:2,display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:"20px"}}>
               <div className="nd-tag">{n.tag}</div>
               <div className="nd-title">{n.title}</div>
               <div className="nd-meta"><span>{n.src}</span><span>{n.time}</span></div>
             </div>
+            <div className="back-btn" style={{zIndex:3}} onClick={()=>setScreen(null)}>← 返回</div>
           </div>
-          <div className="back-btn" onClick={()=>setScreen(null)}>← 返回</div>
         </div>
         {/* Key Stats */}
         {n.keyStats?.length>0&&(
@@ -2055,7 +2116,7 @@ export default function App(){
     return(<><style>{S}</style>
       <div className="app"><div className="page" style={{background:"var(--ink)"}}>
         <div style={{minHeight:220,background:"linear-gradient(135deg,#0a1828 0%,#1a0a28 50%,#0a1018 100%)",position:"relative",padding:"52px 20px 24px",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-          <div className="back-btn" onClick={()=>setScreen(null)}>← 返回</div>
+          <div className="back-btn" style={{zIndex:3}} onClick={()=>setScreen(null)}>← 返回</div>
           <div className="kt-badge" style={{marginBottom:10}}>✦ {k.badge||k.theme||"凱特觀點"}</div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:"#f0f2f8",lineHeight:1.4}}>{k.title}</div>
           <div style={{fontSize:11,color:"rgba(240,242,248,.38)",marginTop:8}}>凱特 · {k.publishedAt||new Date().toLocaleDateString("zh-TW")}</div>
@@ -2357,6 +2418,35 @@ export default function App(){
                     <div className="hld-st"><div className="hld-sl">房地產</div><div className="hld-sv" style={{color:"var(--rose)",fontSize:10}}>{fmtUSD(totalRealEstateUSD)}</div></div>
                   </div>
                 </div>
+                {/* 刷新按鈕 */}
+                {(()=>{
+                  const refreshAllHoldings=async()=>{
+                    setStockRefreshing(true);
+                    if(stockHoldings.length){
+                      const codes=[...new Set(stockHoldings.map(h=>h.code))];
+                      const priceMap=await fetchStockPrices(codes);
+                      if(priceMap.size){
+                        setStockHoldings(prev=>{
+                          const next=prev.map(h=>priceMap.has(h.code)?{...h,currentPrice:priceMap.get(h.code)}:h);
+                          if(currentUser)saveUserData(currentUser.id,"stocks",next).catch(console.error);
+                          return next;
+                        });
+                      }
+                    }
+                    await refreshMetalPrices();
+                    setStockRefreshing(false);
+                    showToast("✓ 所有持倉現價已更新");
+                  };
+                  return(
+                    <div style={{display:"flex",justifyContent:"flex-end",padding:"4px 16px 0"}}>
+                      <button onClick={refreshAllHoldings} disabled={stockRefreshing}
+                        style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"5px 14px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:stockRefreshing?"rgba(154,110,32,.4)":"#9a6e20",cursor:stockRefreshing?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:5}}>
+                        <span style={{display:"inline-block",animation:stockRefreshing?"spin 1s linear infinite":"none"}}>↻</span>
+                        {stockRefreshing?"更新中…":"刷新所有現價"}
+                      </button>
+                    </div>
+                  );
+                })()}
                 <div className="htab-row" style={{overflowX:"auto"}}>
                   {[{id:"insurance",label:"🛡️ 保險"},{id:"stock",label:"📈 股票"},{id:"fixed",label:"💰 固收"},{id:"metal",label:"💎 貴金屬"},{id:"realestate",label:"🏠 房地產"}].map(t=>(
                     <div key={t.id} className={`htab ${holdingsTab===t.id?"active":""}`} onClick={()=>setHoldingsTab(t.id)} style={{flexShrink:0}}>{t.label}</div>
@@ -3752,6 +3842,11 @@ export default function App(){
                     {group.comingSoon?(
                       <div style={{margin:"0 16px 14px",background:"var(--card)",border:"1px dashed rgba(240,242,245,.12)",borderRadius:14,padding:"20px 16px",textAlign:"center"}}>
                         <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:3,color:"var(--md)",textTransform:"uppercase"}}>即將上架</div>
+                      </div>
+                    ):group.items.length===0?(
+                      <div style={{margin:"0 16px 14px",background:"var(--card)",border:"1px dashed var(--bl)",borderRadius:14,padding:"20px 16px",textAlign:"center"}}>
+                        <div style={{fontSize:11,color:"var(--md)",lineHeight:1.7}}>尚無產品</div>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"var(--md)",marginTop:4,opacity:.6}}>請由凱特後台新增</div>
                       </div>
                     ):(
                       group.items.map((prod,pi)=>{
