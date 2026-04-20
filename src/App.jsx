@@ -220,11 +220,71 @@ async function generateAI(prompt,maxTokens=1500){
   return data.content?.[0]?.text||"";
 }
 async function aiChat(messages,systemPrompt){
-  const data=await callAI({model:"claude-sonnet-4-20250514",max_tokens:600,system:systemPrompt,messages});
+  const data=await callAI({model:"claude-haiku-4-5-20251001",max_tokens:600,system:systemPrompt,messages});
   return data.content?.[0]?.text||"抱歉，請稍後再試。";
 }
 
-const ADVISOR_SYSTEM=`你是凱特資產管理的專屬線上顧問，代表凱特與客戶溝通。個性：專業、溫暖、親切，像一位懂得傾聽的私人財富顧問。產品知識庫：${JSON.stringify(PRODUCT_KB_OBJ)}。回答規則：1.繁體中文，語氣自然親切 2.介紹產品時只給50字摘要，問客戶想進一步了解哪個部分 3.客戶追問才提供細節，一次只說一個重點 4.數字從知識庫引用 5.不確定說「這個我幫您記下來，請凱特稍後確認」6.不要用條列式或標題，就是自然對話語氣`;
+const ADVISOR_SYSTEM=`你是凱特資產管理的專屬線上顧問，代表凱特與客戶溝通。個性：專業、溫暖、親切，像一位懂得傾聽的私人財富顧問。
+
+產品知識庫：${JSON.stringify(PRODUCT_KB_OBJ)}
+
+【重要：以下為台灣稅務與財務的正確數據，回答時必須以此為準，不得與此矛盾】
+
+▌房地合一稅 2.0（2021年7月1日起）
+個人持有：
+- 持有 2 年以內：45%
+- 持有超過 2 年、未逾 5 年：35%
+- 持有超過 5 年、未逾 10 年：20%
+- 持有超過 10 年：15%
+- 自住且設籍滿 6 年：10%（獲利 400 萬以內免稅）
+法人/公司持有：一律 45%
+
+▌遺產稅（現行）
+- 免稅額：1,333 萬元
+- 稅率級距：5,000 萬以下 10%、5,000 萬至 1 億 15%、逾 1 億 20%
+- 配偶扣除額：553 萬、每位直系血親卑親屬扣除額：56 萬
+- 父母扣除額：每人 138 萬、喪葬費扣除額：138 萬
+- 壽險死亡給付免計入遺產，但超過 3,740 萬部分須計入個人基本所得額
+
+▌贈與稅
+- 每人每年免稅額：244 萬元
+- 稅率：2,500 萬以下 10%、2,500 萬至 5,000 萬 15%、逾 5,000 萬 20%
+- 婚嫁贈與（子女結婚）：額外 100 萬免稅
+
+▌綜合所得稅（114 年度，115 年 5 月申報）
+- 稅率級距：59 萬以下 5%、59–133 萬 12%、133–266 萬 20%、266–498 萬 30%、逾 498 萬 40%
+- 免稅額：每人 9.7 萬
+- 標準扣除額：單身 13.1 萬、夫妻合併 26.2 萬
+- 薪資所得特別扣除額：上限 21.8 萬
+- 幼兒學前特別扣除額：第 1 名 15 萬、第 2 名以上 22.5 萬
+- 長照特別扣除額：每人 18 萬
+- 房租支出特別扣除額：上限 18 萬
+
+▌房屋稅
+- 自住：1.2%（全國最多 3 戶）
+- 非自住（囤房稅 2.0，2024年7月起）：2%–4.8%（各縣市不同）
+
+▌土地增值稅
+- 自用住宅優惠稅率：10%（需自住且設籍）
+- 一般稅率：20%、30%、40%（依漲價倍數）
+
+▌境外所得與CRS
+- 台灣居民境外所得超過 100 萬須申報最低稅負
+- CRS（共同申報準則）：台灣已加入，金融帳戶資訊與多國交換
+
+▌壽險相關
+- 保險給付（死亡）不計入遺產（實質課稅原則除外）
+- 躉繳投資型保單注意實質課稅原則
+
+回答規則：
+1. 繁體中文，語氣自然親切
+2. 所有稅務數字必須以上方知識庫為準，不得自行推算或猜測
+3. 介紹產品時只給 50 字摘要，問客戶想進一步了解哪個部分
+4. 客戶追問才提供細節，一次只說一個重點
+5. 數字從知識庫引用
+6. 遇到不確定或知識庫未涵蓋的內容，說「這個我幫您記下來，請凱特稍後確認，建議諮詢專業稅務顧問」
+7. 不要用條列式或標題，就是自然對話語氣
+8. 涉及稅務規劃時，提醒客戶以專業稅務顧問的意見為準`;
 
 const QUICK_OPTIONS=[
   {label:"了解產品",action:"product_menu"},
@@ -317,7 +377,8 @@ async function fetchStockPrices(codes){
     try{
       const isTW=code.endsWith(".TW");
       const raw=await searchNews(isTW?`台股 ${code.replace(".TW","")} 今日收盤價`:`${code} stock latest price today`);
-      const result=await generateAI(`找出股票「${code}」的最新股價。只輸出純JSON：{"price":數字}\n資料：${raw.slice(0,1000)}`,200);
+      const data=await callAI({model:"claude-haiku-4-5-20251001",max_tokens:200,messages:[{role:"user",content:`找出股票「${code}」的最新股價。只輸出純JSON：{"price":數字}\n資料：${raw.slice(0,1000)}`}]});
+      const result=data.content?.[0]?.text||"";
       const cleaned=result.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
       if(parsed.price&&parsed.price>0)priceMap.set(code,parsed.price);
@@ -344,9 +405,18 @@ function syncMetalHoldingPrices(holdings,metalPrices,usdTwd){
 }
 
 async function askAI(question){
-  const raw=await generateAI(`你是凱特資產管理財商顧問。繁體中文，簡潔回答。
+  const data=await callAI({model:"claude-haiku-4-5-20251001",max_tokens:500,messages:[{role:"user",content:`你是凱特資產管理財商顧問。繁體中文，簡潔回答。
+
+【正確稅務數據，回答時必須以此為準】
+房地合一稅2.0個人稅率：2年內45%、2-5年35%、5-10年20%、10年以上15%、自住設籍6年10%（400萬免稅）。
+遺產稅：免稅額1,333萬，稅率10%/15%/20%三級。壽險死亡給付不計遺產但超過3,740萬計入最低稅負。
+贈與稅：每人每年244萬免稅，稅率10%/15%/20%。
+綜所稅114年度：59萬以下5%、59-133萬12%、133-266萬20%、266-498萬30%、逾498萬40%。
+不確定的數字不要自行推算，回答「建議諮詢專業稅務顧問確認最新規定」。
+
 純JSON格式：{"answer":"100字內解答","keyPoint":"一句話重點","related":["相關問題1","相關問題2","相關問題3"]}
-問題：${question}`,500);
+問題：${question}`}]});
+  const raw=data.content?.[0]?.text||"";
   try{
     const cleaned=raw.replace(/```json|```/g,"").trim();
     const start=cleaned.indexOf("{");const end=cleaned.lastIndexOf("}")+1;
@@ -1248,7 +1318,22 @@ export default function App(){
     setMetalPricesLoading(false);
   };
 
-  const fetchHomeNews=async()=>{
+  const fetchHomeNews=async(forceRefresh=false)=>{
+    // ── 6 小時快取：先檢查 Supabase，未過期直接用，不呼叫 AI ──
+    const CACHE_KEY="kate_news_cache";
+    const CACHE_TTL=6*60*60*1000; // 6 小時（毫秒）
+    if(!forceRefresh){
+      try{
+        const cached=await loadUserData("local-kate",CACHE_KEY);
+        if(cached&&cached.news?.length>0){
+          const age=Date.now()-new Date(cached.cachedAt).getTime();
+          if(age<CACHE_TTL){
+            setLiveNews(cached.news);
+            return; // 快取有效，直接用，不花 token
+          }
+        }
+      }catch{}
+    }
     setNewsLoading(true);
     try{
       const today=new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
@@ -1330,6 +1415,8 @@ export default function App(){
           return n;
         }));
         setLiveNews(newsWithImages);
+        // 存進 Supabase 快取（用 local-kate 帳號，所有用戶共用）
+        saveUserData("local-kate",CACHE_KEY,{news:newsWithImages,cachedAt:new Date().toISOString()}).catch(console.error);
       }
     }catch(e){console.error(e);}
     setNewsLoading(false);
@@ -2347,7 +2434,7 @@ export default function App(){
             {/* 即時新聞 */}
             <div className="sec" style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:16}}>
               <span>即時財經新聞</span>
-              <button onClick={fetchHomeNews} disabled={newsLoading} style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"4px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:newsLoading?"rgba(154,110,32,.4)":"#9a6e20",cursor:newsLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:4}}>
+              <button onClick={()=>fetchHomeNews(true)} disabled={newsLoading} style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"4px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:newsLoading?"rgba(154,110,32,.4)":"#9a6e20",cursor:newsLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:4}}>
                 <span style={{display:"inline-block",animation:newsLoading?"spin 1s linear infinite":"none"}}>↻</span>{newsLoading?"更新中":"刷新"}
               </button>
             </div>
