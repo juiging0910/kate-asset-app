@@ -1324,7 +1324,7 @@ export default function App(){
     const CACHE_TTL=6*60*60*1000; // 6 小時（毫秒）
     if(!forceRefresh){
       try{
-        const cached=await loadUserData("local-kate",CACHE_KEY);
+        const cached=await loadUserData("00000000-0000-0000-0000-000000004b61",CACHE_KEY);
         if(cached&&cached.news?.length>0){
           const age=Date.now()-new Date(cached.cachedAt).getTime();
           if(age<CACHE_TTL){
@@ -1416,7 +1416,7 @@ export default function App(){
         }));
         setLiveNews(newsWithImages);
         // 存進 Supabase 快取（用 local-kate 帳號，所有用戶共用）
-        saveUserData("local-kate",CACHE_KEY,{news:newsWithImages,cachedAt:new Date().toISOString()}).catch(console.error);
+        saveUserData("00000000-0000-0000-0000-000000004b61",CACHE_KEY,{news:newsWithImages,cachedAt:new Date().toISOString()}).catch(console.error);
       }
     }catch(e){console.error(e);}
     setNewsLoading(false);
@@ -1478,9 +1478,9 @@ export default function App(){
   };
 
   const LOCAL_ACCOUNTS=[
-    {username:"Kate",password:"kate2026",is_kate:true,display_name:"凱特",risk_level:"穩健",id:"local-kate"},
-    {username:"kate",password:"kate2026",is_kate:true,display_name:"凱特",risk_level:"穩健",id:"local-kate"},
-    {username:"demo",password:"demo1234",is_kate:false,display_name:"示範用戶",risk_level:"穩健",id:"local-demo"},
+    {username:"Kate",password:"kate2026",is_kate:true,display_name:"凱特",risk_level:"穩健",id:"00000000-0000-0000-0000-000000004b61"},
+    {username:"kate",password:"kate2026",is_kate:true,display_name:"凱特",risk_level:"穩健",id:"00000000-0000-0000-0000-000000004b61"},
+    {username:"demo",password:"demo1234",is_kate:false,display_name:"示範用戶",risk_level:"穩健",id:"00000000-0000-0000-0000-000000006465"},
   ];
   const handleLogin=async()=>{
     if(!acct||!pwd||loginLoading)return;
@@ -1507,7 +1507,7 @@ export default function App(){
         if(onbData&&onbData.length>0)setOnboardingList(onbData);
         const artData=await loadUserData(localUser.id,"kate_articles");
         if(artData&&artData.length>0){setPublishedArticles(artData);setPublishedPicks(artData[0]);}
-        const prodData=await loadUserData("local-kate","kate_products");
+        const prodData=await loadUserData("00000000-0000-0000-0000-000000004b61","kate_products");
         if(prodData&&prodData.length>0)setProductGroups(prodData);
       }catch(e){console.error("Supabase load error",e);}
       setLoggedIn(true);setLoginLoading(false);return;
@@ -1542,7 +1542,7 @@ export default function App(){
       const artData=await loadUserData(user.id,"kate_articles");
       if(artData&&artData.length>0){setPublishedArticles(artData);setPublishedPicks(artData[0]);}
       // 讀取產品資料（Kate 帳號，所有用戶共用）
-      const prodData=await loadUserData("local-kate","kate_products");
+      const prodData=await loadUserData("00000000-0000-0000-0000-000000004b61","kate_products");
       if(prodData&&prodData.length>0)setProductGroups(prodData);
       setLoggedIn(true);
     }catch(err){
@@ -4255,7 +4255,7 @@ export default function App(){
                             <button onClick={()=>{
                               const next=productGroups.map((g,gii)=>gii!==gi?g:{...g,items:g.items.filter((_,pii)=>pii!==pi)});
                               setProductGroups(next);
-                              saveUserData("local-kate","kate_products",next).catch(console.error);
+                              saveUserData("00000000-0000-0000-0000-000000004b61","kate_products",next).catch(console.error);
                               showToast("✓ 產品已刪除");
                             }} style={{padding:"6px 10px",borderRadius:8,border:"1px solid rgba(176,80,96,.25)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:9,color:"#b05060",cursor:"pointer"}}>✕</button>
                           </div>
@@ -4745,7 +4745,7 @@ export default function App(){
                   return{...g,items};
                 });
                 setProductGroups(next);
-                saveUserData("local-kate","kate_products",next).catch(console.error);
+                saveUserData("00000000-0000-0000-0000-000000004b61","kate_products",next).catch(console.error);
                 setShowProdEditor(false);
                 showToast(prodEditorItemIdx===null?"✓ 產品已新增":"✓ 產品已更新");
               }} style={{width:"100%",padding:"15px",border:"none",borderRadius:13,background:"linear-gradient(135deg,#9a7030,#c8a84b 45%,#deba60)",color:"#07090f",fontFamily:"'Cinzel',serif",fontSize:12,fontWeight:700,letterSpacing:3,cursor:"pointer",marginBottom:8}}>
@@ -4755,7 +4755,7 @@ export default function App(){
                 <button onClick={()=>{
                   const next=productGroups.map((g,gi)=>gi!==prodEditorGroupIdx?g:{...g,items:(g.items||[]).filter((_,pi)=>pi!==prodEditorItemIdx)});
                   setProductGroups(next);
-                  saveUserData("local-kate","kate_products",next).catch(console.error);
+                  saveUserData("00000000-0000-0000-0000-000000004b61","kate_products",next).catch(console.error);
                   setShowProdEditor(false);
                   showToast("✓ 產品已刪除");
                 }} style={{width:"100%",padding:"12px",borderRadius:13,border:"1px solid rgba(176,80,96,.25)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:2,color:"#b05060",cursor:"pointer"}}>刪除此產品</button>
