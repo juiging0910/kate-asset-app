@@ -969,6 +969,108 @@ async function saveUserData(userId,key,value,retries=2){
   }
 }
 
+// ─────────── CLIENT OVERVIEW COMPONENT ───────────
+function ClientOverview({isKate,USD_TWD,showToast,setShowMsg}){
+  const [clientList,setClientList]=useState([]);
+  const [clientLoading,setClientLoading]=useState(false);
+  const [expandedClient,setExpandedClient]=useState(null);
+  const [clientAssets,setClientAssets]=useState({});
+
+  const loadAllClients=async()=>{
+    setClientLoading(true);
+    try{
+      const users=await supaFetch(`/kate_users?select=id,username,display_name,risk_level,created_at&is_kate=eq.false`);
+      setClientList(users||[]);
+    }catch{showToast("⚠ 載入客戶列表失敗");}
+    setClientLoading(false);
+  };
+
+  const loadClientAssets=async(userId)=>{
+    if(clientAssets[userId])return;
+    try{
+      const [ins,stk,fix,metal,re]=await Promise.all([
+        loadUserData(userId,"insurance"),
+        loadUserData(userId,"stocks"),
+        loadUserData(userId,"fixed"),
+        loadUserData(userId,"metals"),
+        loadUserData(userId,"realestate"),
+      ]);
+      const m={"躉繳":1,"2年":2,"5年":5,"12年":12};
+      const insTotal=(ins||[]).reduce((s,h)=>s+(h.actualCostUSD&&Number(h.actualCostUSD)>0?Number(h.actualCostUSD):Number(h.annualPremiumUSD||0)*(m[h.paymentTerm]||1)),0);
+      const stkTotal=(stk||[]).reduce((s,h)=>{const v=h.shares*h.currentPrice;return s+(h.currency==="USD"?Math.round(v*USD_TWD):Math.round(v));},0);
+      const fixTotal=(fix||[]).reduce((s,h)=>s+h.amountUSD,0);
+      const metalTotal=(metal||[]).reduce((s,h)=>s+(h.grams*(h.currentPricePerGram||h.costPerGram||0)),0);
+      const reTotal=(re||[]).reduce((s,h)=>s+h.amountUSD,0);
+      const grandTotal=Math.round(insTotal*USD_TWD)+stkTotal+Math.round(fixTotal*USD_TWD)+Math.round(metalTotal*USD_TWD)+Math.round(reTotal*USD_TWD);
+      setClientAssets(prev=>({...prev,[userId]:{insurance:ins||[],stocks:stk||[],fixed:fix||[],metals:metal||[],realestate:re||[],insTotal,stkTotal,fixTotal,metalTotal,reTotal,grandTotal}}));
+    }catch{}
+  };
+
+  useEffect(()=>{if(isKate)loadAllClients();},[isKate]);
+
+  return(
+    <div style={{margin:"0 16px 14px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontSize:12,color:"var(--md)"}}>{clientList.length} 位客戶</div>
+        <button onClick={loadAllClients} disabled={clientLoading} style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"4px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:clientLoading?"rgba(154,110,32,.4)":"#9a6e20",cursor:"pointer"}}>
+          {clientLoading?"載入中…":"↻ 刷新"}
+        </button>
+      </div>
+      {clientList.map(user=>{
+        const isExpanded=expandedClient===user.id;
+        const assets=clientAssets[user.id];
+        return(
+          <div key={user.id} style={{background:"var(--card)",border:`1px solid ${isExpanded?"rgba(154,110,32,.3)":"var(--bl)"}`,borderRadius:14,marginBottom:10,overflow:"hidden"}}>
+            <div onClick={async()=>{if(isExpanded){setExpandedClient(null);}else{setExpandedClient(user.id);await loadClientAssets(user.id);}}}
+              style={{padding:"14px 16px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:600,color:"var(--td)",marginBottom:2}}>{user.display_name||user.username}</div>
+                <div style={{fontSize:11,color:"var(--md)"}}>@{user.username} · {user.risk_level||"穩健"}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                {assets&&<div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:"var(--gold)"}}>NT$ {assets.grandTotal.toLocaleString()}</div>}
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",marginTop:2}}>{isExpanded?"收起 ▲":"展開 ▼"}</div>
+              </div>
+            </div>
+            {isExpanded&&(
+              <div style={{padding:"0 16px 16px",borderTop:"1px solid var(--bl)"}}>
+                {!assets?(
+                  <div style={{textAlign:"center",padding:"16px",color:"var(--md)",fontSize:12}}>載入中…</div>
+                ):(
+                  <>
+                    {[["🛡️ 保險",`USD ${assets.insTotal.toLocaleString()}`,`${assets.insurance.length} 張`],
+                      ["📈 股票",`NT$ ${assets.stkTotal.toLocaleString()}`,`${assets.stocks.length} 檔`],
+                      ["💰 固收",`USD ${assets.fixTotal.toLocaleString()}`,`${assets.fixed.length} 筆`],
+                      ["💎 貴金屬",`USD ${assets.metalTotal.toLocaleString()}`,`${assets.metals.length} 項`],
+                      ["🏠 房地產",`USD ${assets.reTotal.toLocaleString()}`,`${assets.realestate.length} 筆`],
+                    ].map(([label,val,count])=>(
+                      <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--bl)"}}>
+                        <div style={{fontSize:13,color:"var(--td)"}}>{label}</div>
+                        <div style={{textAlign:"right"}}>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"var(--td)"}}>{val}</div>
+                          <div style={{fontSize:10,color:"var(--md)"}}>{count}</div>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,padding:"10px 14px",background:"rgba(154,110,32,.08)",borderRadius:10}}>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#8a5e18",letterSpacing:1}}>總資產估值</div>
+                      <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:16,fontWeight:700,color:"#8a5e18"}}>NT$ {assets.grandTotal.toLocaleString()}</div>
+                    </div>
+                    <button onClick={()=>setShowMsg(true)} style={{width:"100%",marginTop:10,padding:"10px",borderRadius:10,border:"1px solid rgba(154,110,32,.25)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"#8a5e18",cursor:"pointer"}}>💬 聯繫此客戶</button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {!clientLoading&&clientList.length===0&&(
+        <div style={{textAlign:"center",padding:"24px 16px",color:"var(--md)",fontSize:12}}>目前尚無客戶帳號</div>
+      )}
+    </div>
+  );
+}
+
 // ─────────── MAIN COMPONENT ───────────
 export default function App(){
   // Auth
@@ -4101,119 +4203,8 @@ export default function App(){
 
                 {/* 客戶資產總覽 */}
                 <div className="sec">客戶資產總覽</div>
-                {(()=>{
-                  const [clientList,setClientList]=React.useState([]);
-                  const [clientLoading,setClientLoading]=React.useState(false);
-                  const [expandedClient,setExpandedClient]=React.useState(null);
-                  const [clientAssets,setClientAssets]=React.useState({});
+                <ClientOverview isKate={isKate} USD_TWD={USD_TWD} showToast={showToast} setShowMsg={setShowMsg}/>
 
-                  const loadAllClients=async()=>{
-                    setClientLoading(true);
-                    try{
-                      // 從 Supabase 讀取所有用戶
-                      const users=await supaFetch(`/kate_users?select=id,username,display_name,risk_level,created_at&is_kate=eq.false`);
-                      setClientList(users||[]);
-                    }catch(e){showToast("⚠ 載入客戶列表失敗");}
-                    setClientLoading(false);
-                  };
-
-                  const loadClientAssets=async(userId)=>{
-                    if(clientAssets[userId])return; // 已載入過
-                    try{
-                      const [ins,stk,fix,metal,re]=await Promise.all([
-                        loadUserData(userId,"insurance"),
-                        loadUserData(userId,"stocks"),
-                        loadUserData(userId,"fixed"),
-                        loadUserData(userId,"metals"),
-                        loadUserData(userId,"realestate"),
-                      ]);
-                      const insTotal=(ins||[]).reduce((s,h)=>{
-                        const m={"躉繳":1,"2年":2,"5年":5,"12年":12};
-                        return s+(h.actualCostUSD&&Number(h.actualCostUSD)>0?Number(h.actualCostUSD):Number(h.annualPremiumUSD||0)*(m[h.paymentTerm]||1));
-                      },0);
-                      const stkTotal=(stk||[]).reduce((s,h)=>{
-                        const v=h.shares*h.currentPrice;
-                        return s+(h.currency==="USD"?Math.round(v*USD_TWD):Math.round(v));
-                      },0);
-                      const fixTotal=(fix||[]).reduce((s,h)=>s+h.amountUSD,0);
-                      const metalTotal=(metal||[]).reduce((s,h)=>s+(h.grams*(h.currentPricePerGram||h.costPerGram||0)),0);
-                      const reTotal=(re||[]).reduce((s,h)=>s+h.amountUSD,0);
-                      const grandTotal=Math.round(insTotal*USD_TWD)+stkTotal+Math.round(fixTotal*USD_TWD)+Math.round(metalTotal*USD_TWD)+Math.round(reTotal*USD_TWD);
-                      setClientAssets(prev=>({...prev,[userId]:{
-                        insurance:ins||[],stocks:stk||[],fixed:fix||[],metals:metal||[],realestate:re||[],
-                        insTotal,stkTotal,fixTotal,metalTotal,reTotal,grandTotal
-                      }}));
-                    }catch{}
-                  };
-
-                  React.useEffect(()=>{if(isKate)loadAllClients();},[isKate]);
-
-                  return(
-                    <div style={{margin:"0 16px 14px"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                        <div style={{fontSize:12,color:"var(--md)"}}>{clientList.length} 位客戶</div>
-                        <button onClick={loadAllClients} disabled={clientLoading} style={{background:"rgba(154,110,32,.1)",border:"1px solid rgba(154,110,32,.25)",borderRadius:16,padding:"4px 12px",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:1,color:clientLoading?"rgba(154,110,32,.4)":"#9a6e20",cursor:"pointer"}}>
-                          {clientLoading?"載入中…":"↻ 刷新"}
-                        </button>
-                      </div>
-                      {clientLoading&&<div style={{textAlign:"center",padding:20,color:"var(--md)",fontSize:12}}>載入中…</div>}
-                      {clientList.map(user=>{
-                        const isExpanded=expandedClient===user.id;
-                        const assets=clientAssets[user.id];
-                        return(
-                          <div key={user.id} style={{background:"var(--card)",border:`1px solid ${isExpanded?"rgba(154,110,32,.3)":"var(--bl)"}`,borderRadius:14,marginBottom:10,overflow:"hidden"}}>
-                            <div onClick={async()=>{
-                              if(isExpanded){setExpandedClient(null);}
-                              else{setExpandedClient(user.id);await loadClientAssets(user.id);}
-                            }} style={{padding:"14px 16px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                              <div>
-                                <div style={{fontSize:14,fontWeight:600,color:"var(--td)",marginBottom:2}}>{user.display_name||user.username}</div>
-                                <div style={{fontSize:11,color:"var(--md)"}}>@{user.username} · {user.risk_level||"穩健"}</div>
-                              </div>
-                              <div style={{textAlign:"right"}}>
-                                {assets&&<div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:"var(--gold)"}}>NT$ {assets.grandTotal.toLocaleString()}</div>}
-                                <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:"var(--md)",marginTop:2}}>{isExpanded?"收起 ▲":"展開 ▼"}</div>
-                              </div>
-                            </div>
-                            {isExpanded&&(
-                              <div style={{padding:"0 16px 16px",borderTop:"1px solid var(--bl)"}}>
-                                {!assets?(
-                                  <div style={{textAlign:"center",padding:"16px",color:"var(--md)",fontSize:12}}>載入中…</div>
-                                ):(
-                                  <>
-                                    {[
-                                      ["🛡️ 保險",`USD ${assets.insTotal.toLocaleString()}`,`${assets.insurance.length} 張`],
-                                      ["📈 股票",`NT$ ${assets.stkTotal.toLocaleString()}`,`${assets.stocks.length} 檔`],
-                                      ["💰 固收",`USD ${assets.fixTotal.toLocaleString()}`,`${assets.fixed.length} 筆`],
-                                      ["💎 貴金屬",`USD ${assets.metalTotal.toLocaleString()}`,`${assets.metals.length} 項`],
-                                      ["🏠 房地產",`USD ${assets.reTotal.toLocaleString()}`,`${assets.realestate.length} 筆`],
-                                    ].map(([label,val,count])=>(
-                                      <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--bl)"}}>
-                                        <div style={{fontSize:13,color:"var(--td)"}}>{label}</div>
-                                        <div style={{textAlign:"right"}}>
-                                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"var(--td)"}}>{val}</div>
-                                          <div style={{fontSize:10,color:"var(--md)"}}>{count}</div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12,padding:"10px 14px",background:"rgba(154,110,32,.08)",borderRadius:10}}>
-                                      <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#8a5e18",letterSpacing:1}}>總資產估值</div>
-                                      <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:16,fontWeight:700,color:"#8a5e18"}}>NT$ {assets.grandTotal.toLocaleString()}</div>
-                                    </div>
-                                    <button onClick={()=>{setShowMsg(true);}} style={{width:"100%",marginTop:10,padding:"10px",borderRadius:10,border:"1px solid rgba(154,110,32,.25)",background:"transparent",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,color:"#8a5e18",cursor:"pointer"}}>💬 聯繫此客戶</button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {!clientLoading&&clientList.length===0&&(
-                        <div style={{textAlign:"center",padding:"24px 16px",color:"var(--md)",fontSize:12}}>目前尚無客戶帳號</div>
-                      )}
-                    </div>
-                  );
-                })()}
 
                 {/* 客戶財務摘要卡 */}
                 <div className="sec">客戶財務摘要卡</div>
